@@ -274,9 +274,84 @@ textarea{min-height:130px}
   .navbar{padding:0 12px}
   .main{padding:12px}
 }
+
+/* ── USER LOGIN SCREEN ── */
+#user-login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:5000;flex-direction:column;gap:20px}
+#user-login-screen.hidden{display:none!important}
+.ulogin-logo{text-align:center}
+.ulogin-logo-ring{width:80px;height:80px;margin:0 auto 16px;background:radial-gradient(circle,rgba(0,245,255,.12),transparent 70%);border:2px solid rgba(0,245,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;animation:ulo-pulse 3s ease-in-out infinite}
+@keyframes ulo-pulse{0%,100%{box-shadow:0 0 20px rgba(0,245,255,.2),0 0 60px rgba(0,245,255,.05)}50%{box-shadow:0 0 40px rgba(0,245,255,.4),0 0 100px rgba(0,245,255,.1)}}
+.ulogin-title{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;letter-spacing:4px;background:linear-gradient(90deg,var(--cyan),#0080ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+.ulogin-sub{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;text-align:center;margin-top:4px}
+.ulogin-card{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:36px 40px;width:min(420px,94vw);backdrop-filter:blur(20px);position:relative;overflow:hidden}
+.ulogin-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.6}
+.ulogin-card h2{font-family:'Orbitron',monospace;font-size:12px;font-weight:600;letter-spacing:3px;color:var(--text);margin-bottom:26px;text-align:center;text-transform:uppercase}
+.ulogin-field{margin-bottom:16px}
+.ulogin-lbl{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.ulogin-inp{width:100%;background:rgba(0,15,30,.8);border:1px solid rgba(0,245,255,.15);border-radius:6px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;padding:11px 14px;outline:none;transition:var(--ease)}
+.ulogin-inp:focus{border-color:rgba(0,245,255,.5);box-shadow:0 0 18px rgba(0,245,255,.08)}
+.captcha-row{display:flex;gap:10px;align-items:stretch}
+.captcha-question{flex:0 0 auto;background:rgba(0,245,255,.05);border:1px solid rgba(0,245,255,.2);border-radius:6px;padding:11px 16px;font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--cyan);letter-spacing:2px;display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.captcha-inp{flex:1;background:rgba(0,15,30,.8);border:1px solid rgba(0,245,255,.15);border-radius:6px;color:var(--text);font-family:'Orbitron',monospace;font-size:15px;padding:11px 14px;outline:none;transition:var(--ease);text-align:center;width:0}
+.captcha-inp:focus{border-color:rgba(0,245,255,.5);box-shadow:0 0 18px rgba(0,245,255,.08)}
+.ulogin-btn{width:100%;padding:13px;background:linear-gradient(135deg,#0066cc,#0040a0);color:var(--cyan);border:1px solid rgba(0,245,255,.4);border-radius:6px;font-family:'Orbitron',monospace;font-size:11px;font-weight:600;letter-spacing:3px;cursor:pointer;transition:var(--ease);text-transform:uppercase;margin-top:6px}
+.ulogin-btn:hover{box-shadow:0 0 40px rgba(0,100,200,.4);transform:translateY(-1px)}
+.ulogin-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none}
+.ulogin-authority-btn{width:100%;padding:11px;background:rgba(224,64,251,.08);color:var(--purple);border:1px solid rgba(224,64,251,.3);border-radius:6px;font-family:'Orbitron',monospace;font-size:10px;font-weight:600;letter-spacing:2px;cursor:pointer;transition:var(--ease);text-transform:uppercase;margin-top:8px;text-decoration:none;display:block;text-align:center;box-sizing:border-box}
+.ulogin-authority-btn:hover{background:rgba(224,64,251,.18);box-shadow:0 0 20px rgba(224,64,251,.2)}
+.ulogin-err{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);border-radius:6px;padding:9px 13px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);margin-top:10px;display:none}
+.ulogin-lock{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--amber);text-align:center;margin-top:8px;display:none;line-height:1.6}
+.ulogin-demo{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);text-align:center;margin-top:14px;line-height:2}
+.ulogin-demo span{color:var(--cyan)}
 </style>
 </head>
 <body>
+
+<!-- ═══ USER LOGIN SCREEN ═══ -->
+<div id="user-login-screen">
+  <div class="ulogin-logo">
+    <div class="ulogin-logo-ring">
+      <svg viewBox="0 0 32 32" fill="none" width="40" height="40">
+        <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" stroke="#00f5ff" stroke-width="1.5" fill="rgba(0,245,255,0.05)"/>
+        <polygon points="16,7 25,12 25,20 16,25 7,20 7,12" stroke="#00f5ff" stroke-width="1" fill="none" opacity="0.5"/>
+        <circle cx="16" cy="16" r="4" fill="#00f5ff" opacity="0.8"/>
+        <circle cx="16" cy="16" r="2" fill="white"/>
+      </svg>
+    </div>
+    <div class="ulogin-title">SENTINEL AI</div>
+    <div class="ulogin-sub">Intelligence Dashboard — Secure Access</div>
+  </div>
+  <div class="ulogin-card">
+    <h2>User Access Portal</h2>
+    <div class="ulogin-field">
+      <label class="ulogin-lbl">Username</label>
+      <input class="ulogin-inp" id="uloginUser" type="text" placeholder="Enter username" autocomplete="username">
+    </div>
+    <div class="ulogin-field">
+      <label class="ulogin-lbl">Password</label>
+      <input class="ulogin-inp" id="uloginPass" type="password" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <div class="ulogin-field">
+      <label class="ulogin-lbl">Security Verification (Anti-Spam)</label>
+      <div class="captcha-row">
+        <div class="captcha-question" id="uCaptchaQ">— + — = ?</div>
+        <input class="captcha-inp" id="uCaptchaA" type="number" placeholder="Answer">
+      </div>
+    </div>
+    <button class="ulogin-btn" id="uloginBtn" onclick="doUserLogin()">
+      Authenticate &amp; Enter
+    </button>
+    <div class="ulogin-err" id="uloginErr"></div>
+    <div class="ulogin-lock" id="uloginLock"></div>
+    <a href="authority.html" class="ulogin-authority-btn">
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:inline;vertical-align:middle;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
+      Authority / Officer Login
+    </a>
+    <div class="ulogin-demo">
+      Demo: <span>user_demo</span> / <span>Demo@2024</span> &nbsp;|&nbsp; <span>analyst_ravi</span> / <span>Ravi@2024</span>
+    </div>
+  </div>
+</div>
 <div class="notif-wrap" id="notifWrap"></div>
 
 <!-- NAVBAR -->
@@ -634,6 +709,146 @@ const ST = {
 // ── helpers ──────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+
+// ── USER LOGIN / CAPTCHA / SPAM BLOCKER ──────────────────
+(function () {
+  const LOGIN_KEY   = 'sentinel_user';
+  const FAIL_KEY    = 'sentinel_fails';
+  const LOCK_KEY    = 'sentinel_locked';
+  const MAX_FAILS   = 5;
+  const LOCK_MS     = 15 * 60 * 1000;
+
+  let _captchaAns = 0;
+
+  function genCaptcha() {
+    const a = Math.floor(Math.random() * 12) + 1;
+    const b = Math.floor(Math.random() * 12) + 1;
+    _captchaAns = a + b;
+    const q = document.getElementById('uCaptchaQ');
+    if (q) q.textContent = a + ' + ' + b + ' = ?';
+    const inp = document.getElementById('uCaptchaA');
+    if (inp) inp.value = '';
+  }
+
+  function getFails(u) {
+    try { return JSON.parse(localStorage.getItem(FAIL_KEY) || '{}')[u] || 0; } catch { return 0; }
+  }
+  function incFails(u) {
+    try {
+      const d = JSON.parse(localStorage.getItem(FAIL_KEY) || '{}');
+      d[u] = (d[u] || 0) + 1;
+      localStorage.setItem(FAIL_KEY, JSON.stringify(d));
+      return d[u];
+    } catch { return 0; }
+  }
+  function clearFails(u) {
+    try {
+      const d = JSON.parse(localStorage.getItem(FAIL_KEY) || '{}');
+      delete d[u];
+      localStorage.setItem(FAIL_KEY, JSON.stringify(d));
+    } catch {}
+  }
+  function getLock(u) {
+    try {
+      const d = JSON.parse(localStorage.getItem(LOCK_KEY) || '{}');
+      if (d[u] && Date.now() < d[u]) return d[u];
+      delete d[u]; localStorage.setItem(LOCK_KEY, JSON.stringify(d)); return 0;
+    } catch { return 0; }
+  }
+  function setLock(u) {
+    try {
+      const d = JSON.parse(localStorage.getItem(LOCK_KEY) || '{}');
+      d[u] = Date.now() + LOCK_MS;
+      localStorage.setItem(LOCK_KEY, JSON.stringify(d));
+      clearFails(u);
+    } catch {}
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('uloginErr');
+    if (!el) return;
+    el.textContent = msg; el.style.display = 'block';
+  }
+  function hideErr() {
+    const el = document.getElementById('uloginErr');
+    if (el) el.style.display = 'none';
+  }
+
+  window.doUserLogin = async function () {
+    hideErr();
+    const username = (document.getElementById('uloginUser').value || '').trim();
+    const password = document.getElementById('uloginPass').value || '';
+    const captchaVal = parseInt(document.getElementById('uCaptchaA').value, 10);
+
+    if (!username || !password) { showErr('⚠ Username and password required.'); return; }
+
+    if (isNaN(captchaVal) || captchaVal !== _captchaAns) {
+      showErr('⚠ Incorrect security verification. Try again.');
+      genCaptcha(); return;
+    }
+
+    const lockedUntil = getLock(username);
+    if (lockedUntil) {
+      const mins = Math.ceil((lockedUntil - Date.now()) / 60000);
+      const lock = document.getElementById('uloginLock');
+      if (lock) { lock.textContent = '⛔ Account locked — try again in ' + mins + ' min.'; lock.style.display = 'block'; }
+      showErr('⚠ Spam detected. Account temporarily locked.');
+      return;
+    }
+
+    const btn = document.getElementById('uloginBtn');
+    btn.disabled = true; btn.textContent = 'AUTHENTICATING...';
+
+    try {
+      const resp = await fetch(window.location.origin + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await resp.json();
+
+      if (resp.ok && data.success) {
+        clearFails(username);
+        const lock = document.getElementById('uloginLock');
+        if (lock) lock.style.display = 'none';
+        sessionStorage.setItem(LOGIN_KEY, JSON.stringify({ username: data.user.username, name: data.user.name }));
+        document.getElementById('user-login-screen').classList.add('hidden');
+      } else {
+        const fails = incFails(username);
+        const remaining = MAX_FAILS - fails;
+        if (fails >= MAX_FAILS) {
+          setLock(username);
+          const lock = document.getElementById('uloginLock');
+          if (lock) { lock.textContent = '⛔ Spam detected. Account locked for 15 minutes.'; lock.style.display = 'block'; }
+          showErr('⚠ Too many failed attempts. Locked.');
+        } else {
+          showErr('⚠ ' + (data.error || 'Invalid credentials.') + ' (' + remaining + ' attempt' + (remaining !== 1 ? 's' : '') + ' remaining)');
+        }
+        genCaptcha();
+      }
+    } catch {
+      showErr('⚠ Cannot reach server. Please try again.');
+    }
+
+    btn.disabled = false; btn.textContent = 'Authenticate & Enter';
+  };
+
+  function initUserLogin() {
+    const screen = document.getElementById('user-login-screen');
+    if (!screen) return;
+    if (sessionStorage.getItem(LOGIN_KEY)) {
+      screen.classList.add('hidden');
+      return;
+    }
+    genCaptcha();
+    ['uloginUser', 'uloginPass', 'uCaptchaA'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') window.doUserLogin(); });
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', initUserLogin);
+})();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function apiFetch(url, opts = {}) {
