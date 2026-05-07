@@ -601,7 +601,9 @@ td{padding:12px 10px;color:var(--text-secondary);vertical-align:middle}
 <div class="notif-container" id="notif-container"></div>
 
 <script>
-const BASE_URL = window.location.origin;
+const BASE_URL = (window.location.protocol === 'file:' || window.location.port !== '5000')
+  ? 'http://localhost:5000'
+  : window.location.origin;
 let authToken  = null;
 let authUser   = null;
 let socket     = null;
