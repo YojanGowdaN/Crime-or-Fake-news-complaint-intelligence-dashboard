@@ -126,7 +126,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 /* ── ALERT FEED ── */
 .feed{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow-y:auto;padding-right:3px}
 .feed::-webkit-scrollbar{width:3px}.feed::-webkit-scrollbar-thumb{background:rgba(0,245,255,.2);border-radius:2px}
-.acard{background:rgba(5,15,30,.85);border:1px solid rgba(0,245,255,.08);border-radius:6px;padding:10px 12px;position:relative;overflow:hidden;animation:sin .35s ease}
+.acard{background:rgba(5,15,30,.85);border:1px solid rgba(0,245,255,.08);border-radius:6px;padding:10px 12px;position:relative;overflow:hidden;animation:sin .35s ease;min-height:80px}
 @keyframes sin{from{opacity:0;transform:translateX(-16px)}}
 .acard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .acard.high::before,.acard.critical::before{background:var(--red);box-shadow:0 0 8px var(--red)}
@@ -134,8 +134,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .acard.low::before{background:var(--green);box-shadow:0 0 8px var(--green)}
 .acard.high{animation:ablink 3s ease-in-out infinite,sin .35s ease}
 @keyframes ablink{0%,95%,100%{background:rgba(5,15,30,.85)}97%{background:rgba(255,23,68,.05)}}
-.ahdr{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
-.sev-tag{font-family:'Share Tech Mono',monospace;font-size:8px;font-weight:700;letter-spacing:2px;padding:2px 7px;border-radius:3px;text-transform:uppercase}
+.ahdr{display:flex;align-items:center;gap:20px;margin-bottom:10px;flex-wrap:wrap}
+.sev-tag{font-family:'Share Tech Mono',monospace;font-size:8px;font-weight:700;letter-spacing:2px;padding:4px 7px;border-radius:3px;text-transform:uppercase}
 .sev-high,.sev-critical{background:rgba(255,23,68,.15);color:var(--red);border:1px solid rgba(255,23,68,.3)}
 .sev-medium{background:rgba(255,196,0,.15);color:var(--amber);border:1px solid rgba(255,196,0,.3)}
 .sev-low{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
@@ -697,7 +697,9 @@ textarea{min-height:130px}
 //  AI: Llama 3.3 70B via Groq + HuggingFace cross-check
 // ════════════════════════════════════════════════════════
 
-const API = window.location.origin;
+const API = (window.location.protocol === 'file:' || window.location.port !== '5000')
+  ? 'http://localhost:5000'
+  : window.location.origin;
 
 const ST = {
   alerts: [], news: [],
