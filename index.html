@@ -9,1045 +9,275 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <style>
 :root {
-  --bg-void: #020408;
-  --bg-deep: #050c14;
-  --bg-panel: rgba(5, 18, 35, 0.85);
-  --bg-card: rgba(8, 25, 50, 0.7);
-  --neon-cyan: #00f5ff;
-  --neon-red: #ff1744;
-  --neon-amber: #ffc400;
-  --neon-green: #00e676;
-  --neon-purple: #e040fb;
-  --text-primary: #e8f4fd;
-  --text-secondary: #7ab3d4;
-  --text-muted: #3d6b8a;
-  --border-glow: rgba(0, 245, 255, 0.15);
-  --border-hot: rgba(255, 23, 68, 0.4);
-  --glass: rgba(0, 245, 255, 0.04);
-  --sidebar-w: 220px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --bg: #020408;
+  --bg-panel: rgba(8,25,50,0.75);
+  --cyan: #00f5ff;
+  --red: #ff1744;
+  --amber: #ffc400;
+  --green: #00e676;
+  --purple: #e040fb;
+  --text: #e8f4fd;
+  --text2: #7ab3d4;
+  --muted: #3d6b8a;
+  --border: rgba(0,245,255,0.15);
+  --sidebar: 220px;
+  --ease: all 0.28s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* scanlines */
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,.012) 2px,rgba(0,245,255,.012) 4px);pointer-events:none;z-index:9999;animation:scan 8s linear infinite}
+@keyframes scan{to{background-position:0 40px}}
+
+/* ── NAVBAR ── */
+.navbar{position:fixed;top:0;left:0;right:0;height:54px;background:rgba(2,6,12,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:1000;backdrop-filter:blur(20px);gap:12px}
+.nav-brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nav-logo svg{width:30px;height:30px}
+.nav-title{font-family:'Orbitron',monospace;font-weight:800;font-size:clamp(13px,2vw,18px);letter-spacing:3px;background:linear-gradient(90deg,var(--cyan),#0080ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-title span{-webkit-text-fill-color:var(--red)}
+.nav-center{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pdot 2s ease-in-out infinite;flex-shrink:0}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.4}}
+#navTime{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:2px}
+.nav-links{display:flex;gap:2px;flex-shrink:0}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-radius:4px;transition:var(--ease);white-space:nowrap}
+.nav-links a:hover,.nav-links a.active-link{color:var(--cyan);background:rgba(0,245,255,.08)}
+.nav-links a.authority-link{color:var(--purple);border:1px solid rgba(224,64,251,.3)}
+.nav-links a.authority-link:hover{background:rgba(224,64,251,.08);color:var(--purple)}
+
+/* ── LAYOUT ── */
+.layout{display:flex;margin-top:54px;min-height:calc(100vh - 54px)}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);background:rgba(3,10,22,.98);border-right:1px solid var(--border);position:fixed;left:0;top:54px;bottom:0;display:flex;flex-direction:column;padding:20px 0;z-index:900;backdrop-filter:blur(30px);transition:transform .3s ease}
+.sidebar-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;padding:0 16px 8px;margin-bottom:4px;border-bottom:1px solid rgba(0,245,255,.06)}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px;margin-bottom:16px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;transition:var(--ease);color:var(--text2);font-weight:600;font-size:13px;border:1px solid transparent;position:relative;overflow:hidden;white-space:nowrap}
+.nav-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan);transform:scaleY(0);transition:transform .2s;border-radius:0 2px 2px 0}
+.nav-item:hover,.nav-item.active{color:var(--cyan);background:rgba(0,245,255,.07);border-color:rgba(0,245,255,.12)}
+.nav-item:hover::before,.nav-item.active::before{transform:scaleY(1)}
+.nav-item.authority-item{color:var(--purple)}
+.nav-item.authority-item::before{background:var(--purple)}
+.nav-item.authority-item:hover{color:var(--purple);background:rgba(224,64,251,.07);border-color:rgba(224,64,251,.12)}
+.nav-icon{width:16px;height:16px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;font-family:'Share Tech Mono',monospace;animation:bpulse 2s ease-in-out infinite}
+@keyframes bpulse{0%,100%{box-shadow:0 0 6px var(--red)}50%{box-shadow:0 0 14px var(--red)}}
+.sidebar-footer{margin-top:auto;padding:10px 14px;border-top:1px solid var(--border)}
+.sys-status{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);line-height:1.9}
+.sys-row{display:flex;justify-content:space-between}
+.sys-ok{color:var(--green)}
+.sys-warn{color:var(--amber)}
+.sys-err{color:var(--red)}
+
+/* hamburger toggle (mobile) */
+.hamburger{display:none;flex-direction:column;gap:4px;cursor:pointer;padding:6px;flex-shrink:0}
+.hamburger span{width:20px;height:2px;background:var(--cyan);border-radius:2px;transition:var(--ease)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:899}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar);flex:1;padding:clamp(14px,3vw,28px);min-width:0}
+.view{display:none;animation:fadeUp .35s ease}
+.view.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PAGE HEADER ── */
+.page-header{margin-bottom:22px;position:relative}
+.page-header::after{content:'';position:absolute;bottom:-8px;left:0;width:50px;height:2px;background:linear-gradient(90deg,var(--cyan),transparent)}
+.page-title{font-family:'Orbitron',monospace;font-size:clamp(14px,2.5vw,20px);font-weight:700;letter-spacing:2px;margin-bottom:3px}
+.page-sub{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;overflow:hidden;transition:var(--ease)}
+.stat:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4),0 0 18px rgba(0,245,255,.07)}
+.stat.danger{border-color:rgba(255,23,68,.3)}.stat.danger:hover{border-color:var(--red)}
+.stat.warn{border-color:rgba(255,196,0,.3)}.stat.warn:hover{border-color:var(--amber)}
+.stat.ok{border-color:rgba(0,230,118,.3)}.stat.ok:hover{border-color:var(--green)}
+.stat-label{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.stat-val{font-family:'Orbitron',monospace;font-size:clamp(20px,3vw,30px);font-weight:800;line-height:1;margin-bottom:4px;color:var(--cyan)}
+.stat.danger .stat-val{color:var(--red)}.stat.warn .stat-val{color:var(--amber)}.stat.ok .stat-val{color:var(--green)}
+.stat-sub{font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace}
+.stat-sub.up{color:var(--red)}.stat-sub.dn{color:var(--green)}
+.stat-ico{position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:.07;width:44px;height:44px}
+
+/* ── PANELS ── */
+.panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:clamp(14px,2vw,20px);position:relative;overflow:hidden;margin-bottom:16px}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.35}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.panel-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 9px;border-radius:20px;letter-spacing:1px;white-space:nowrap}
+.badge-live{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.3);animation:lpulse 2s ease-in-out infinite}
+@keyframes lpulse{0%,100%{box-shadow:0 0 7px rgba(0,230,118,.2)}50%{box-shadow:0 0 15px rgba(0,230,118,.4)}}
+.badge-alert{background:rgba(255,23,68,.1);color:var(--red);border:1px solid rgba(255,23,68,.3)}
+.badge-ai{background:rgba(224,64,251,.1);color:var(--purple);border:1px solid rgba(224,64,251,.3)}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+
+/* ── CHARTS ── */
+.chart-wrap{position:relative;height:clamp(160px,22vw,220px)}
+
+/* ── ALERT FEED ── */
+.feed{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow-y:auto;padding-right:3px}
+.feed::-webkit-scrollbar{width:3px}.feed::-webkit-scrollbar-thumb{background:rgba(0,245,255,.2);border-radius:2px}
+.acard{background:rgba(5,15,30,.85);border:1px solid rgba(0,245,255,.08);border-radius:6px;padding:10px 12px;position:relative;overflow:hidden;animation:sin .35s ease}
+@keyframes sin{from{opacity:0;transform:translateX(-16px)}}
+.acard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.acard.high::before,.acard.critical::before{background:var(--red);box-shadow:0 0 8px var(--red)}
+.acard.medium::before{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.acard.low::before{background:var(--green);box-shadow:0 0 8px var(--green)}
+.acard.high{animation:ablink 3s ease-in-out infinite,sin .35s ease}
+@keyframes ablink{0%,95%,100%{background:rgba(5,15,30,.85)}97%{background:rgba(255,23,68,.05)}}
+.ahdr{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+.sev-tag{font-family:'Share Tech Mono',monospace;font-size:8px;font-weight:700;letter-spacing:2px;padding:2px 7px;border-radius:3px;text-transform:uppercase}
+.sev-high,.sev-critical{background:rgba(255,23,68,.15);color:var(--red);border:1px solid rgba(255,23,68,.3)}
+.sev-medium{background:rgba(255,196,0,.15);color:var(--amber);border:1px solid rgba(255,196,0,.3)}
+.sev-low{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+.atime{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);margin-left:auto}
+.atext{font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:5px}
+.ameta{display:flex;gap:10px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);flex-wrap:wrap}
+.aprob{color:var(--red)}
+
+/* ── ANALYZE ── */
+.analyze-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.inp-label{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+textarea,input[type=text],input[type=file]{width:100%;background:rgba(0,15,30,.85);border:1px solid rgba(0,245,255,.15);border-radius:6px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;padding:10px 12px;transition:var(--ease);outline:none;resize:vertical}
+textarea:focus,input[type=text]:focus{border-color:rgba(0,245,255,.4);box-shadow:0 0 18px rgba(0,245,255,.07)}
+textarea{min-height:130px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-family:'Orbitron',monospace;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;transition:var(--ease);position:relative;overflow:hidden}
+.btn-primary{background:linear-gradient(135deg,#0066cc,#0040a0);color:var(--cyan);border:1px solid rgba(0,245,255,.4);box-shadow:0 4px 18px rgba(0,100,200,.3)}
+.btn-primary:hover{box-shadow:0 6px 26px rgba(0,100,200,.5);transform:translateY(-1px)}
+.btn-danger{background:linear-gradient(135deg,#8b0000,#600000);color:var(--red);border:1px solid rgba(255,23,68,.4)}
+.btn-sm{padding:7px 14px;font-size:9px}
+.btn-loading{opacity:.65;pointer-events:none}
+
+/* ── RESULT PANEL ── */
+.result-box{background:rgba(0,8,20,.9);border:1px solid rgba(0,245,255,.12);border-radius:8px;padding:18px;min-height:300px}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;color:var(--muted);gap:10px}
+.placeholder svg{opacity:.18;width:44px;height:44px}
+.placeholder p{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px}
+.r-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,245,255,.06)}
+.r-item:last-child{border:none}
+.r-key{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.r-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:600;color:var(--cyan)}
+.r-val.danger{color:var(--red)}.r-val.warn{color:var(--amber)}.r-val.ok{color:var(--green)}
+.reasoning-box{margin-top:10px;padding:10px;background:rgba(224,64,251,.05);border:1px solid rgba(224,64,251,.15);border-radius:6px}
+.reasoning-label{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--purple);letter-spacing:2px;margin-bottom:4px}
+.reasoning-text{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ── PROGRESS ── */
+.prog-wrap{margin-top:10px}
+.prog-row{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:4px;letter-spacing:1px}
+.prog-bar{height:4px;background:rgba(0,245,255,.07);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.prog-fill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.pf-red{background:linear-gradient(90deg,#8b0000,var(--red))}
+.pf-amber{background:linear-gradient(90deg,#7a4f00,var(--amber))}
+.pf-cyan{background:linear-gradient(90deg,#003366,var(--cyan))}
+
+/* ── MAP ── */
+#heatmap{height:clamp(320px,50vw,520px);border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.leaflet-container{background:#040e1a!important}
+.leaflet-tile-pane{filter:brightness(.5) hue-rotate(180deg) saturate(.5) invert(.8)}
+
+/* ── NEWS FEED ── */
+.news-list{display:flex;flex-direction:column;gap:7px;max-height:420px;overflow-y:auto}
+.news-card{background:rgba(5,15,30,.8);border:1px solid rgba(0,245,255,.08);border-radius:6px;padding:11px 13px;cursor:pointer;transition:var(--ease);border-left:3px solid transparent}
+.news-card:hover{border-color:rgba(0,245,255,.2);background:rgba(8,25,50,.8)}
+.news-card.rHIGH{border-left-color:var(--red)}
+.news-card.rMEDIUM{border-left-color:var(--amber)}
+.news-card.rLOW{border-left-color:var(--green)}
+.news-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.35}
+.news-meta{display:flex;gap:8px;align-items:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);flex-wrap:wrap}
+.nsrc{color:var(--cyan)}
+.nrisk{padding:1px 6px;border-radius:3px;font-size:7px}
+.nrisk.rHIGH{background:rgba(255,23,68,.15);color:var(--red)}
+.nrisk.rMEDIUM{background:rgba(255,196,0,.15);color:var(--amber)}
+.nrisk.rLOW{background:rgba(0,230,118,.15);color:var(--green)}
+
+/* ── COMPLAINTS ── */
+.complaint-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info-box{padding:12px;border-radius:6px;margin-bottom:10px}
+.info-box.cyan{background:rgba(0,245,255,.03);border:1px solid rgba(0,245,255,.1)}
+.info-box.amber{background:rgba(255,196,0,.03);border:1px solid rgba(255,196,0,.1)}
+.info-box.purple{background:rgba(224,64,251,.03);border:1px solid rgba(224,64,251,.1)}
+.info-head{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;margin-bottom:7px}
+.info-body{font-size:12px;color:var(--text2);line-height:1.7}
+
+/* ── NOTIFICATIONS ── */
+.notif-wrap{position:fixed;top:62px;right:16px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:360px;width:calc(100vw - 32px)}
+.notif{background:rgba(2,10,25,.98);border:1px solid rgba(255,23,68,.4);border-left:4px solid var(--red);border-radius:8px;padding:12px 14px;animation:nin .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 4px 26px rgba(0,0,0,.6);backdrop-filter:blur(20px);pointer-events:all}
+.notif.removing{animation:nout .3s ease forwards}
+@keyframes nin{from{opacity:0;transform:translateX(36px) scale(.9)}}
+@keyframes nout{to{opacity:0;transform:translateX(36px) scale(.9)}}
+.nhdr{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.ntitle{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--red);letter-spacing:2px}
+.nbody{font-size:11px;color:var(--text2);line-height:1.45}
+.nclose{background:none;border:none;color:var(--muted);cursor:pointer;margin-left:auto;font-size:15px;line-height:1}
+
+/* ── TICKER ── */
+.ticker{background:rgba(255,23,68,.05);border:1px solid rgba(255,23,68,.18);border-radius:6px;padding:7px 12px;overflow:hidden;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ticker-lbl{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--red);letter-spacing:2px;white-space:nowrap;border-right:1px solid rgba(255,23,68,.3);padding-right:10px;flex-shrink:0}
+.ticker-txt{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);white-space:nowrap;animation:tick 40s linear infinite;letter-spacing:1px}
+@keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── THREAT BADGE ── */
+.threat-badge{display:inline-flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;padding:5px 12px;border-radius:4px;text-transform:uppercase;border:1px solid;animation:tglow 2s ease-in-out infinite;color:var(--red);background:rgba(255,23,68,.07);border-color:rgba(255,23,68,.3)}
+@keyframes tglow{0%,100%{box-shadow:0 0 8px rgba(255,23,68,.2)}50%{box-shadow:0 0 20px rgba(255,23,68,.4)}}
+
+/* ── SPINNER / CURSOR ── */
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,245,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cursor{display:inline-block;width:2px;height:12px;background:var(--cyan);animation:cur 1s step-end infinite;vertical-align:text-bottom;margin-left:2px}
+@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:36px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px}
+
+/* ── STATUS BAR (backend) ── */
+.api-status{display:inline-flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:8px;padding:3px 8px;border-radius:4px;border:1px solid}
+.api-status.online{color:var(--green);border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.07)}
+.api-status.offline{color:var(--red);border-color:rgba(255,23,68,.3);background:rgba(255,23,68,.07)}
+.api-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.api-status.online .api-dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+.api-status.offline .api-dot{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+::-webkit-scrollbar-thumb{background:rgba(0,245,255,.14);border-radius:3px}
+
+/* ══════════════ RESPONSIVE ══════════════ */
+@media(max-width:1280px){.stats-grid{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:960px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .g2,.g2-1,.analyze-grid,.complaint-grid{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  :root{--sidebar:0px}
+  .sidebar{transform:translateX(-220px);width:220px}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .hamburger{display:flex}
+  .main{margin-left:0}
+  .nav-links{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+  .navbar{padding:0 12px}
+  .main{padding:12px}
 }
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--bg-void);
-  color: var(--text-primary);
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 400;
-  min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* ─── SCANLINE OVERLAY ─── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,245,255,0.012) 2px, rgba(0,245,255,0.012) 4px);
-  pointer-events: none;
-  z-index: 9999;
-  animation: scanlines 8s linear infinite;
-}
-
-@keyframes scanlines {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 40px; }
-}
-
-/* ─── NOISE TEXTURE ─── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9998;
-}
-
-/* ─── NAVBAR ─── */
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 56px;
-  background: rgba(2, 6, 12, 0.95);
-  border-bottom: 1px solid var(--border-glow);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  z-index: 1000;
-  backdrop-filter: blur(20px);
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-logo {
-  width: 32px;
-  height: 32px;
-  position: relative;
-}
-
-.nav-logo svg { width: 100%; height: 100%; }
-
-.nav-title {
-  font-family: 'Orbitron', monospace;
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 3px;
-  background: linear-gradient(90deg, var(--neon-cyan), #0080ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: none;
-}
-
-.nav-title span {
-  color: var(--neon-red);
-  -webkit-text-fill-color: var(--neon-red);
-}
-
-.nav-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 11px;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--neon-green);
-  box-shadow: 0 0 8px var(--neon-green);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--neon-green); }
-  50% { opacity: 0.5; box-shadow: 0 0 16px var(--neon-green); }
-}
-
-.nav-time {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 12px;
-  color: var(--neon-cyan);
-  letter-spacing: 2px;
-}
-
-.nav-links {
-  display: flex;
-  gap: 4px;
-}
-
-.nav-links a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 6px 12px;
-  border-radius: 4px;
-  transition: var(--transition);
-}
-
-.nav-links a:hover {
-  color: var(--neon-cyan);
-  background: rgba(0, 245, 255, 0.08);
-}
-
-/* ─── LAYOUT ─── */
-.layout {
-  display: flex;
-  margin-top: 56px;
-  min-height: calc(100vh - 56px);
-}
-
-/* ─── SIDEBAR ─── */
-.sidebar {
-  width: var(--sidebar-w);
-  background: rgba(3, 10, 22, 0.98);
-  border-right: 1px solid var(--border-glow);
-  position: fixed;
-  left: 0;
-  top: 56px;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 24px 0;
-  z-index: 900;
-  backdrop-filter: blur(30px);
-}
-
-.sidebar-section {
-  padding: 0 12px;
-  margin-bottom: 8px;
-}
-
-.sidebar-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  padding: 0 12px 8px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgba(0,245,255,0.06);
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: var(--transition);
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  border: 1px solid transparent;
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--neon-cyan);
-  transform: scaleY(0);
-  transition: transform 0.2s ease;
-  border-radius: 0 2px 2px 0;
-}
-
-.nav-item:hover, .nav-item.active {
-  color: var(--neon-cyan);
-  background: rgba(0, 245, 255, 0.06);
-  border-color: rgba(0, 245, 255, 0.1);
-}
-
-.nav-item:hover::before, .nav-item.active::before {
-  transform: scaleY(1);
-}
-
-.nav-item.active {
-  background: rgba(0, 245, 255, 0.1);
-}
-
-.nav-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.nav-badge {
-  margin-left: auto;
-  background: var(--neon-red);
-  color: white;
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-family: 'Share Tech Mono', monospace;
-  font-weight: 700;
-  animation: badge-pulse 2s ease-in-out infinite;
-}
-
-@keyframes badge-pulse {
-  0%, 100% { box-shadow: 0 0 6px var(--neon-red); }
-  50% { box-shadow: 0 0 14px var(--neon-red); }
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-glow);
-}
-
-.system-status {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--text-muted);
-  line-height: 1.8;
-}
-
-.sys-line {
-  display: flex;
-  justify-content: space-between;
-}
-
-.sys-val { color: var(--neon-green); }
-.sys-val.warn { color: var(--neon-amber); }
-
-/* ─── MAIN CONTENT ─── */
-.main {
-  margin-left: var(--sidebar-w);
-  flex: 1;
-  padding: 28px;
-  position: relative;
-}
-
-/* ─── SECTION VIEWS ─── */
-.view { display: none; animation: fadeInUp 0.4s ease; }
-.view.active { display: block; }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── PAGE HEADER ─── */
-.page-header {
-  margin-bottom: 28px;
-  position: relative;
-}
-
-.page-header::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 0;
-  width: 60px;
-  height: 2px;
-  background: linear-gradient(90deg, var(--neon-cyan), transparent);
-}
-
-.page-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.page-subtitle {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-family: 'Share Tech Mono', monospace;
-  letter-spacing: 1px;
-}
-
-/* ─── STATS GRID ─── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
-.stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-glow);
-  border-radius: 8px;
-  padding: 18px;
-  position: relative;
-  overflow: hidden;
-  transition: var(--transition);
-  backdrop-filter: blur(10px);
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(0,245,255,0.03) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.stat-card:hover {
-  border-color: rgba(0, 245, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 245, 255, 0.08);
-}
-
-.stat-card.danger { border-color: rgba(255, 23, 68, 0.3); }
-.stat-card.danger:hover { border-color: var(--neon-red); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,23,68,0.15); }
-.stat-card.warn { border-color: rgba(255, 196, 0, 0.3); }
-.stat-card.warn:hover { border-color: var(--neon-amber); }
-
-.stat-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
-.stat-value {
-  font-family: 'Orbitron', monospace;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 6px;
-  color: var(--neon-cyan);
-}
-
-.stat-card.danger .stat-value { color: var(--neon-red); }
-.stat-card.warn .stat-value { color: var(--neon-amber); }
-.stat-card.success .stat-value { color: var(--neon-green); }
-
-.stat-change {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: 'Share Tech Mono', monospace;
-}
-
-.stat-change.up { color: var(--neon-red); }
-.stat-change.dn { color: var(--neon-green); }
-
-.stat-icon {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.08;
-  width: 48px;
-  height: 48px;
-}
-
-/* ─── GRID LAYOUTS ─── */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
-.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 18px; }
-
-/* ─── PANEL ─── */
-.panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border-glow);
-  border-radius: 10px;
-  padding: 20px;
-  backdrop-filter: blur(10px);
-  position: relative;
-  overflow: hidden;
-}
-
-.panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
-  opacity: 0.4;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.panel-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: var(--text-primary);
-  text-transform: uppercase;
-}
-
-.panel-badge {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 1px;
-}
-
-.badge-live {
-  background: rgba(0, 230, 118, 0.12);
-  color: var(--neon-green);
-  border: 1px solid rgba(0, 230, 118, 0.3);
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(0, 230, 118, 0.2); }
-  50% { box-shadow: 0 0 16px rgba(0, 230, 118, 0.4); }
-}
-
-.badge-alert {
-  background: rgba(255, 23, 68, 0.12);
-  color: var(--neon-red);
-  border: 1px solid rgba(255, 23, 68, 0.3);
-}
-
-/* ─── CHART CONTAINERS ─── */
-.chart-wrap {
-  position: relative;
-  height: 220px;
-}
-
-/* ─── ALERTS FEED ─── */
-.alerts-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 360px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.alerts-feed::-webkit-scrollbar { width: 4px; }
-.alerts-feed::-webkit-scrollbar-track { background: transparent; }
-.alerts-feed::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.2); border-radius: 2px; }
-
-.alert-card {
-  background: rgba(5, 15, 30, 0.8);
-  border: 1px solid rgba(0, 245, 255, 0.1);
-  border-radius: 6px;
-  padding: 12px 14px;
-  position: relative;
-  overflow: hidden;
-  transition: var(--transition);
-  animation: slideInLeft 0.4s ease;
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.alert-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-}
-
-.alert-card.high::before { background: var(--neon-red); box-shadow: 0 0 8px var(--neon-red); }
-.alert-card.medium::before { background: var(--neon-amber); box-shadow: 0 0 8px var(--neon-amber); }
-.alert-card.low::before { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
-
-.alert-card.high { border-color: rgba(255,23,68,0.2); animation: alert-blink 3s ease-in-out infinite, slideInLeft 0.4s ease; }
-
-@keyframes alert-blink {
-  0%, 95%, 100% { background: rgba(5,15,30,0.8); }
-  97% { background: rgba(255,23,68,0.06); }
-}
-
-.alert-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.alert-severity {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  padding: 2px 8px;
-  border-radius: 3px;
-  text-transform: uppercase;
-}
-
-.sev-high { background: rgba(255,23,68,0.15); color: var(--neon-red); border: 1px solid rgba(255,23,68,0.3); }
-.sev-medium { background: rgba(255,196,0,0.15); color: var(--neon-amber); border: 1px solid rgba(255,196,0,0.3); }
-.sev-low { background: rgba(0,230,118,0.15); color: var(--neon-green); border: 1px solid rgba(0,230,118,0.3); }
-
-.alert-time {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--text-muted);
-  margin-left: auto;
-}
-
-.alert-text {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 6px;
-}
-
-.alert-meta {
-  display: flex;
-  gap: 12px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--text-muted);
-}
-
-.alert-prob { color: var(--neon-red); }
-
-/* ─── ANALYZE SECTION ─── */
-.analyze-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-bottom: 18px;
-}
-
-.input-group {
-  margin-bottom: 16px;
-}
-
-.input-label {
-  display: block;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-textarea, input[type="text"], input[type="file"] {
-  width: 100%;
-  background: rgba(0, 15, 30, 0.8);
-  border: 1px solid rgba(0, 245, 255, 0.15);
-  border-radius: 6px;
-  color: var(--text-primary);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 14px;
-  padding: 12px 14px;
-  transition: var(--transition);
-  outline: none;
-  resize: vertical;
-}
-
-textarea:focus, input[type="text"]:focus {
-  border-color: rgba(0, 245, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 245, 255, 0.08), inset 0 0 20px rgba(0, 245, 255, 0.02);
-}
-
-textarea { min-height: 140px; }
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: 'Orbitron', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.btn:hover::before { opacity: 1; }
-
-.btn-primary {
-  background: linear-gradient(135deg, #0066cc, #0040a0);
-  color: var(--neon-cyan);
-  border: 1px solid rgba(0, 245, 255, 0.4);
-  box-shadow: 0 4px 20px rgba(0, 100, 200, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
-}
-
-.btn-primary:hover {
-  box-shadow: 0 6px 30px rgba(0, 100, 200, 0.5), 0 0 60px rgba(0, 245, 255, 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #8b0000, #600000);
-  color: var(--neon-red);
-  border: 1px solid rgba(255, 23, 68, 0.4);
-  box-shadow: 0 4px 20px rgba(200, 0, 50, 0.3);
-}
-
-.btn-loading { opacity: 0.7; pointer-events: none; }
-
-/* ─── RESULTS PANEL ─── */
-.result-panel {
-  background: rgba(0, 8, 20, 0.9);
-  border: 1px solid rgba(0, 245, 255, 0.15);
-  border-radius: 8px;
-  padding: 20px;
-  min-height: 320px;
-}
-
-.result-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 280px;
-  color: var(--text-muted);
-  gap: 12px;
-}
-
-.result-placeholder svg { opacity: 0.2; width: 48px; height: 48px; }
-.result-placeholder p { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 2px; }
-
-.result-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 245, 255, 0.06);
-}
-
-.result-item:last-child { border-bottom: none; }
-
-.result-key {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.result-val {
-  font-family: 'Orbitron', monospace;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--neon-cyan);
-}
-
-.result-val.danger { color: var(--neon-red); }
-.result-val.warn { color: var(--neon-amber); }
-.result-val.safe { color: var(--neon-green); }
-
-/* ─── PROGRESS BARS ─── */
-.progress-wrap { margin-top: 8px; }
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  letter-spacing: 1px;
-}
-
-.progress-bar {
-  height: 4px;
-  background: rgba(0, 245, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
-
-.progress-fill::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: -2px;
-  bottom: -2px;
-  width: 4px;
-  border-radius: 2px;
-}
-
-.fill-danger { background: linear-gradient(90deg, #8b0000, var(--neon-red)); }
-.fill-danger::after { box-shadow: 0 0 8px var(--neon-red); background: var(--neon-red); }
-.fill-warn { background: linear-gradient(90deg, #7a4f00, var(--neon-amber)); }
-.fill-warn::after { box-shadow: 0 0 8px var(--neon-amber); background: var(--neon-amber); }
-.fill-safe { background: linear-gradient(90deg, #004d2e, var(--neon-green)); }
-.fill-safe::after { box-shadow: 0 0 8px var(--neon-green); background: var(--neon-green); }
-.fill-info { background: linear-gradient(90deg, #003366, var(--neon-cyan)); }
-.fill-info::after { box-shadow: 0 0 8px var(--neon-cyan); background: var(--neon-cyan); }
-
-/* ─── HEATMAP ─── */
-#heatmap {
-  height: 500px;
-  border-radius: 8px;
-  border: 1px solid var(--border-glow);
-  overflow: hidden;
-}
-
-.leaflet-container {
-  background: #040e1a !important;
-}
-
-/* ─── COMPLAINT FORM ─── */
-.complaint-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-
-/* ─── NOTIFICATION POPUP ─── */
-.notification-container {
-  position: fixed;
-  top: 70px;
-  right: 20px;
-  z-index: 9000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.notification {
-  background: rgba(2, 10, 25, 0.98);
-  border: 1px solid rgba(255, 23, 68, 0.5);
-  border-left: 4px solid var(--neon-red);
-  border-radius: 8px;
-  padding: 14px 18px;
-  min-width: 300px;
-  max-width: 380px;
-  animation: notifIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 23, 68, 0.2);
-  backdrop-filter: blur(20px);
-  pointer-events: all;
-}
-
-.notification.removing { animation: notifOut 0.3s ease forwards; }
-
-@keyframes notifIn {
-  from { opacity: 0; transform: translateX(40px) scale(0.9); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
-}
-
-@keyframes notifOut {
-  to { opacity: 0; transform: translateX(40px) scale(0.9); }
-}
-
-.notif-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.notif-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--neon-red);
-  animation: spin 1s linear;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.notif-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--neon-red);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.notif-body {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.notif-close {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  margin-left: auto;
-  font-size: 16px;
-  line-height: 1;
-}
-
-/* ─── TYPING CURSOR ─── */
-.typing-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  background: var(--neon-cyan);
-  animation: blink 1s step-end infinite;
-  vertical-align: text-bottom;
-  margin-left: 2px;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-/* ─── LOADING SPINNER ─── */
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(0, 245, 255, 0.2);
-  border-top-color: var(--neon-cyan);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-/* ─── WHATSAPP STATUS ─── */
-.whatsapp-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  background: rgba(0, 128, 0, 0.06);
-  border: 1px solid rgba(0, 230, 118, 0.2);
-  border-radius: 6px;
-  margin-top: 12px;
-}
-
-.wa-icon { color: #25d366; font-size: 20px; }
-
-.wa-info { flex: 1; }
-.wa-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-muted); letter-spacing: 2px; margin-bottom: 2px; }
-.wa-val { font-size: 13px; color: var(--neon-green); font-weight: 600; }
-
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,245,255,0.3); }
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 1200px) {
-  .stats-grid { grid-template-columns: repeat(3, 1fr); }
-  .grid-3 { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 900px) {
-  :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-220px); }
-  .main { margin-left: 0; }
-  .grid-2, .grid-2-1, .analyze-layout, .complaint-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ─── ANIMATED WARNING BADGE ─── */
-.threat-level {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 2px;
-  padding: 6px 14px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  border: 1px solid;
-}
-
-.threat-critical {
-  color: var(--neon-red);
-  background: rgba(255,23,68,0.08);
-  border-color: rgba(255,23,68,0.3);
-  animation: threat-glow 2s ease-in-out infinite;
-}
-
-@keyframes threat-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(255,23,68,0.2); }
-  50% { box-shadow: 0 0 24px rgba(255,23,68,0.4); }
-}
-
-/* ─── TICKER ─── */
-.ticker-wrap {
-  background: rgba(255, 23, 68, 0.06);
-  border: 1px solid rgba(255, 23, 68, 0.2);
-  border-radius: 6px;
-  padding: 8px 14px;
-  overflow: hidden;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ticker-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  color: var(--neon-red);
-  letter-spacing: 2px;
-  white-space: nowrap;
-  border-right: 1px solid rgba(255,23,68,0.3);
-  padding-right: 12px;
-}
-
-.ticker-text {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  animation: ticker 30s linear infinite;
-  letter-spacing: 1px;
-}
-
-@keyframes ticker {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ─── HEXAGON DECO ─── */
-.deco-hex {
-  position: fixed;
-  opacity: 0.02;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: var(--text-muted);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 2px;
-}
-
-/* Map dark filter */
-.leaflet-tile-pane { filter: brightness(0.5) hue-rotate(180deg) saturate(0.5) invert(0.8); }
 </style>
 </head>
 <body>
-
-<!-- NOTIFICATION CONTAINER -->
-<div class="notification-container" id="notifContainer"></div>
+<div class="notif-wrap" id="notifWrap"></div>
 
 <!-- NAVBAR -->
 <nav class="navbar">
@@ -1062,58 +292,77 @@ textarea { min-height: 140px; }
     </div>
     <span class="nav-title">SENTINEL <span>AI</span></span>
   </div>
-  <div class="nav-status">
+
+  <div class="nav-center">
     <div class="status-dot"></div>
-    <span>SYSTEM ONLINE</span>
-    <span style="margin: 0 8px; opacity:0.3">|</span>
-    <span class="nav-time" id="navTime"></span>
+    <span id="backendStatusBar" class="api-status offline"><span class="api-dot"></span>CONNECTING</span>
+    <span style="margin:0 6px;opacity:.3">|</span>
+    <span id="navTime"></span>
   </div>
+
+  <div class="hamburger" id="hamburger" onclick="toggleSidebar()">
+    <span></span><span></span><span></span>
+  </div>
+
   <div class="nav-links">
-    <a href="#" onclick="navigate('dashboard')">Dashboard</a>
-    <a href="#" onclick="navigate('analyze')">Analyze</a>
-    <a href="#" onclick="navigate('alerts')">Alerts</a>
-    <a href="#" onclick="navigate('heatmap')">Heatmap</a>
+    <a href="#" onclick="nav('dashboard')">Dashboard</a>
+    <a href="#" onclick="nav('news')">Live News</a>
+    <a href="#" onclick="nav('analyze')">Analyze</a>
+    <a href="#" onclick="nav('alerts')">Alerts</a>
+    <a href="#" onclick="nav('heatmap')">Heatmap</a>
+    <a href="#" onclick="nav('complaints')">Report</a>
+    <a href="/authority.html" class="authority-link">🛡 CIMC</a>
   </div>
 </nav>
 
-<!-- LAYOUT -->
-<div class="layout">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
+<div class="layout">
   <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Navigation</div>
-      <nav class="sidebar-nav">
-        <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/></svg>
-          Dashboard
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="nav('dashboard')" id="n-dashboard">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="nav('news')" id="n-news">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" stroke-width="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="1.5"/><line x1="9" y1="21" x2="9" y2="9" stroke-width="1.5"/></svg>
+        Live News
+        <span class="nav-badge" id="newsBadge">0</span>
+      </div>
+      <div class="nav-item" onclick="nav('analyze')" id="n-analyze">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="1.5"/><path d="m21 21-4.35-4.35" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Analyze
+      </div>
+      <div class="nav-item" onclick="nav('alerts')" id="n-alerts">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="1.5"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-width="1.5"/></svg>
+        Live Alerts
+        <span class="nav-badge" id="alertBadge">0</span>
+      </div>
+      <div class="nav-item" onclick="nav('heatmap')" id="n-heatmap">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="10" r="3" stroke-width="1.5"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke-width="1.5"/></svg>
+        Geo Heatmap
+      </div>
+      <div class="nav-item" onclick="nav('complaints')" id="n-complaints">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke-width="1.5"/></svg>
+        Report
+      </div>
+      <a href="/authority.html" style="text-decoration:none">
+        <div class="nav-item authority-item">
+          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="1.5"/></svg>
+          Authority CIMC
         </div>
-        <div class="nav-item" onclick="navigate('analyze')" id="nav-analyze">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="1.5"/><path d="m21 21-4.35-4.35" stroke-width="1.5" stroke-linecap="round"/></svg>
-          Analyze News
-        </div>
-        <div class="nav-item" onclick="navigate('alerts')" id="nav-alerts">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="1.5"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-width="1.5"/></svg>
-          Live Alerts
-          <span class="nav-badge" id="alertBadge">0</span>
-        </div>
-        <div class="nav-item" onclick="navigate('heatmap')" id="nav-heatmap">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="10" r="3" stroke-width="1.5"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke-width="1.5"/></svg>
-          Geo Heatmap
-        </div>
-        <div class="nav-item" onclick="navigate('complaints')" id="nav-complaints">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke-width="1.5"/></svg>
-          Complaints
-        </div>
-      </nav>
-    </div>
+      </a>
+    </nav>
 
     <div class="sidebar-footer">
-      <div class="system-status">
-        <div class="sys-line"><span>AI ENGINE</span><span class="sys-val">ACTIVE</span></div>
-        <div class="sys-line"><span>SOCKET</span><span class="sys-val" id="socketStatus">CONN</span></div>
-        <div class="sys-line"><span>THREATS</span><span class="sys-val warn" id="sysThreats">0</span></div>
-        <div class="sys-line"><span>UPTIME</span><span class="sys-val" id="sysUptime">00:00:00</span></div>
+      <div class="sys-status">
+        <div class="sys-row"><span>AI ENGINE</span><span class="sys-ok" id="sysAI">LLAMA 3.3</span></div>
+        <div class="sys-row"><span>SOCKET</span><span id="sysSock" class="sys-warn">—</span></div>
+        <div class="sys-row"><span>BACKEND</span><span id="sysBE" class="sys-warn">CHECKING</span></div>
+        <div class="sys-row"><span>THREATS</span><span class="sys-warn" id="sysThreats">0</span></div>
+        <div class="sys-row"><span>UPTIME</span><span class="sys-ok" id="sysUptime">00:00:00</span></div>
       </div>
     </div>
   </aside>
@@ -1121,290 +370,243 @@ textarea { min-height: 140px; }
   <!-- MAIN -->
   <main class="main">
 
-    <!-- ▸ DASHBOARD VIEW -->
-    <div class="view active" id="view-dashboard">
-
-      <div class="ticker-wrap">
-        <span class="ticker-label">◉ LIVE FEED</span>
-        <span class="ticker-text" id="tickerText">
-          MONITORING ACTIVE — Fake news detection running — Crime analytics processing — Geo-intelligence scanning — Panic index calculating — WhatsApp alert system armed — Sentinel AI operational — MONITORING ACTIVE — Fake news detection running — Crime analytics processing — Geo-intelligence scanning
-        </span>
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="view active" id="v-dashboard">
+      <div class="ticker">
+        <span class="ticker-lbl">◉ LIVE</span>
+        <span class="ticker-txt">SENTINEL AI ONLINE — Llama 3.3 (70B) fake-news engine active — RSS scraping BBC · NDTV · TOI · The Hindu — Real-time crime analytics — Geo intelligence scanning — WhatsApp bot active — Authority CIMC monitoring — SENTINEL AI ONLINE — Llama 3.3 (70B) fake-news engine active — RSS scraping BBC · NDTV · TOI · The Hindu — Real-time crime analytics — Geo intelligence scanning — WhatsApp bot active — Authority CIMC monitoring</span>
       </div>
 
       <div class="page-header">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div>
             <div class="page-title">INTELLIGENCE OVERVIEW</div>
-            <div class="page-subtitle">REAL-TIME THREAT MONITORING DASHBOARD</div>
+            <div class="page-sub">REAL-TIME THREAT MONITORING · LLAMA 3.3 POWERED</div>
           </div>
-          <div class="threat-level threat-critical">
-            <span style="animation:blink 1s step-end infinite;display:inline-block">⬤</span>
-            THREAT LEVEL: HIGH
-          </div>
+          <div class="threat-badge"><span style="animation:cur 1s step-end infinite;display:inline-block">⬤</span>&nbsp;THREAT: <span id="threatLvl">MONITORING</span></div>
         </div>
       </div>
 
-      <!-- STATS -->
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat">
           <div class="stat-label">Total Alerts</div>
-          <div class="stat-value" id="statAlerts">0</div>
-          <div class="stat-change up" id="statAlertsChange">+0 today</div>
-          <svg class="stat-icon" fill="none" viewBox="0 0 24 24" stroke="#00f5ff"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="1"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-width="1"/></svg>
+          <div class="stat-val" id="sAlerts">—</div>
+          <div class="stat-sub" id="sAlertsS">Loading...</div>
+          <svg class="stat-ico" fill="none" viewBox="0 0 24 24" stroke="#00f5ff"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="1"/></svg>
         </div>
-        <div class="stat-card danger">
+        <div class="stat danger">
           <div class="stat-label">Fake News Detected</div>
-          <div class="stat-value" id="statFakeNews">0</div>
-          <div class="stat-change up" id="statFakeChange">+0 this hour</div>
-          <svg class="stat-icon" fill="none" viewBox="0 0 24 24" stroke="#ff1744"><circle cx="12" cy="12" r="10" stroke-width="1"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke-width="1"/></svg>
+          <div class="stat-val" id="sFake">—</div>
+          <div class="stat-sub up">Llama 3.3 scanning</div>
+          <svg class="stat-ico" fill="none" viewBox="0 0 24 24" stroke="#ff1744"><circle cx="12" cy="12" r="10" stroke-width="1"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke-width="1"/></svg>
         </div>
-        <div class="stat-card warn">
-          <div class="stat-label">High Risk Incidents</div>
-          <div class="stat-value" id="statHighRisk">0</div>
-          <div class="stat-change up" id="statRiskChange">Active now</div>
-          <svg class="stat-icon" fill="none" viewBox="0 0 24 24" stroke="#ffc400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="1"/><line x1="12" y1="9" x2="12" y2="13" stroke-width="1"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="1"/></svg>
+        <div class="stat warn">
+          <div class="stat-label">High Risk</div>
+          <div class="stat-val" id="sHigh">—</div>
+          <div class="stat-sub up">Active incidents</div>
+          <svg class="stat-ico" fill="none" viewBox="0 0 24 24" stroke="#ffc400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="1"/></svg>
         </div>
-        <div class="stat-card danger">
+        <div class="stat danger">
           <div class="stat-label">Panic Index</div>
-          <div class="stat-value" id="statPanic">0.0</div>
-          <div class="stat-change" id="statPanicChange">Calculating...</div>
-          <svg class="stat-icon" fill="none" viewBox="0 0 24 24" stroke="#ff1744"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="1"/></svg>
+          <div class="stat-val" id="sPanic">—</div>
+          <div class="stat-sub" id="sPanicS">Awaiting scan</div>
+          <svg class="stat-ico" fill="none" viewBox="0 0 24 24" stroke="#ff1744"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="1"/></svg>
         </div>
-        <div class="stat-card success">
-          <div class="stat-label">Monitoring Status</div>
-          <div class="stat-value" style="font-size:16px;padding-top:6px;">ACTIVE</div>
-          <div class="stat-change dn">All systems nominal</div>
-          <svg class="stat-icon" fill="none" viewBox="0 0 24 24" stroke="#00e676"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="1"/></svg>
-        </div>
-      </div>
-
-      <!-- CHARTS ROW 1 -->
-      <div class="grid-2" style="margin-bottom:18px">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Fake News Trend</span>
-            <span class="panel-badge badge-live">● LIVE</span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="trendChart"></canvas>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Crime Distribution</span>
-            <span class="panel-badge badge-alert">AI ANALYSIS</span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="crimeChart"></canvas>
-          </div>
+        <div class="stat ok">
+          <div class="stat-label">News Scraped</div>
+          <div class="stat-val" id="sNews">—</div>
+          <div class="stat-sub dn">RSS feeds live</div>
+          <svg class="stat-ico" fill="none" viewBox="0 0 24 24" stroke="#00e676"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="1"/></svg>
         </div>
       </div>
 
-      <!-- CHART + FEED ROW -->
-      <div class="grid-2-1">
+      <div class="g2">
         <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Panic Index — 24H</span>
-            <span class="panel-badge badge-live">● LIVE</span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="panicChart"></canvas>
-          </div>
+          <div class="panel-hdr"><span class="panel-title">Fake News Trend</span><span class="badge badge-live">● LIVE</span></div>
+          <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
         </div>
         <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Live Alerts</span>
-            <span class="panel-badge badge-alert" id="alertCount">0 ACTIVE</span>
-          </div>
-          <div class="alerts-feed" id="dashAlertsFeed">
-            <div class="empty-state">Waiting for alerts...</div>
-          </div>
+          <div class="panel-hdr"><span class="panel-title">Crime Distribution</span><span class="badge badge-alert">AI ANALYSIS</span></div>
+          <div class="chart-wrap"><canvas id="crimeChart"></canvas></div>
         </div>
       </div>
 
-      <!-- WHATSAPP STATUS -->
-      <div class="panel" style="margin-top:18px">
-        <div class="panel-header">
-          <span class="panel-title">WhatsApp Alert System</span>
-          <span class="panel-badge" style="background:rgba(37,211,102,0.1);color:#25d366;border:1px solid rgba(37,211,102,0.3)">ARMED</span>
+      <div class="g2-1">
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-title">Panic Index — 24H</span><span class="badge badge-live">● LIVE</span></div>
+          <div class="chart-wrap"><canvas id="panicChart"></canvas></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-          <div class="whatsapp-status">
-            <span class="wa-icon">📱</span>
-            <div class="wa-info"><div class="wa-label">Status</div><div class="wa-val">Connected</div></div>
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">Recent Alerts</span>
+            <span class="badge badge-alert" id="dashAlertCount">0 ACTIVE</span>
           </div>
-          <div class="whatsapp-status">
-            <span class="wa-icon">📤</span>
-            <div class="wa-info"><div class="wa-label">Alerts Sent</div><div class="wa-val" id="waSent">0</div></div>
-          </div>
-          <div class="whatsapp-status">
-            <span class="wa-icon">👥</span>
-            <div class="wa-info"><div class="wa-label">Recipients</div><div class="wa-val">12 Active</div></div>
-          </div>
+          <div class="feed" id="dashFeed"><div class="empty">Connecting to backend...</div></div>
         </div>
       </div>
     </div>
 
-    <!-- ▸ ANALYZE VIEW -->
-    <div class="view" id="view-analyze">
+    <!-- ═══ LIVE NEWS ═══ -->
+    <div class="view" id="v-news">
       <div class="page-header">
-        <div class="page-title">FAKE NEWS ANALYZER</div>
-        <div class="page-subtitle">AI-POWERED CONTENT INTELLIGENCE ENGINE</div>
-      </div>
-
-      <div class="analyze-layout">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Input Content</span>
-            <span class="panel-badge badge-live">● AI READY</span>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Suspicious News Content</label>
-            <textarea id="analyzeInput" placeholder="Enter suspicious news, social media post, or article content here...
-
-Example: 'BREAKING: Government confirms alien landing in Bengaluru, army deployed across city...'"></textarea>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="analyzeNews()" id="analyzeBtn">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg>
-              Analyze Now
-            </button>
-            <button class="btn btn-danger" onclick="clearAnalysis()">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="3 6 5 6 21 6" stroke-width="2"/><path d="M19 6l-1 14H6L5 6" stroke-width="2"/></svg>
-              Clear
-            </button>
-            <span id="analyzeStatus" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px"></span>
-          </div>
-
-          <div class="progress-wrap" id="aiConfidence" style="margin-top:20px;display:none">
-            <div class="progress-label"><span>FAKE PROBABILITY</span><span id="fpLabel">0%</span></div>
-            <div class="progress-bar"><div class="progress-fill fill-danger" id="fpBar" style="width:0%"></div></div>
-            <div class="progress-label"><span>PANIC SCORE</span><span id="psLabel">0%</span></div>
-            <div class="progress-bar"><div class="progress-fill fill-warn" id="psBar" style="width:0%"></div></div>
-            <div class="progress-label"><span>AI CONFIDENCE</span><span id="aiLabel">0%</span></div>
-            <div class="progress-bar"><div class="progress-fill fill-info" id="aiBar" style="width:0%"></div></div>
-          </div>
-        </div>
-
-        <div class="result-panel" id="resultPanel">
-          <div class="result-placeholder" id="resultPlaceholder">
-            <svg fill="none" viewBox="0 0 24 24" stroke="#00f5ff"><circle cx="12" cy="12" r="10" stroke-width="1"/><path d="M12 8v4l3 3" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <p>AWAITING INPUT</p>
-            <p style="font-size:9px;color:var(--text-muted)">Enter content and click Analyze</p>
-          </div>
-          <div id="resultContent" style="display:none"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ▸ ALERTS VIEW -->
-    <div class="view" id="view-alerts">
-      <div class="page-header">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div>
-            <div class="page-title">LIVE ALERT FEED</div>
-            <div class="page-subtitle">REAL-TIME INTELLIGENCE NOTIFICATIONS</div>
+            <div class="page-title">LIVE NEWS FEED</div>
+            <div class="page-sub">RSS SCRAPING — BBC · NDTV · TIMES OF INDIA · THE HINDU</div>
           </div>
-          <button class="btn btn-primary" onclick="loadAlerts()" style="font-size:9px;padding:8px 16px">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="23 4 23 10 17 10" stroke-width="2"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2"/></svg>
+          <button class="btn btn-primary btn-sm" onclick="loadNews()">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="23 4 23 10 17 10" stroke-width="2"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2"/></svg>
             Refresh
           </button>
         </div>
       </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Alert Stream</span>
-          <span class="panel-badge badge-live" id="alertsFeedCount">0 ALERTS</span>
+      <div class="g2">
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-hdr">
+            <span class="panel-title">Headlines</span>
+            <span class="badge badge-live" id="newsCountBadge">— ARTICLES</span>
+          </div>
+          <div class="news-list" id="newsList"><div class="empty">Loading RSS feeds...</div></div>
         </div>
-        <div class="alerts-feed" id="mainAlertsFeed" style="max-height:70vh">
-          <div class="empty-state">Loading alerts...</div>
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-hdr">
+            <span class="panel-title">Article Analysis</span>
+            <span class="badge badge-ai">🦙 LLAMA 3.3</span>
+          </div>
+          <div id="newsResultPanel">
+            <div class="placeholder">
+              <svg fill="none" viewBox="0 0 24 24" stroke="#00f5ff"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" stroke-width="1"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="1"/></svg>
+              <p>CLICK ARTICLE TO ANALYZE</p>
+              <p style="font-size:8px;color:var(--muted)">Llama 3.3 will scan for fake news</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ▸ HEATMAP VIEW -->
-    <div class="view" id="view-heatmap">
+    <!-- ═══ ANALYZE ═══ -->
+    <div class="view" id="v-analyze">
+      <div class="page-header">
+        <div class="page-title">FAKE NEWS ANALYZER</div>
+        <div class="page-sub">LLAMA 3.3 (70B) VIA GROQ · HUGGINGFACE CROSS-CHECK</div>
+      </div>
+      <div class="analyze-grid">
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-hdr">
+            <span class="panel-title">Input Content</span>
+            <span class="badge badge-ai" id="analyzeEngineLabel">🦙 LLAMA 3.3 READY</span>
+          </div>
+          <div style="margin-bottom:14px">
+            <label class="inp-label">Suspicious news / article / social media post</label>
+            <textarea id="analyzeInput" placeholder="Paste any suspicious content here...&#10;&#10;Example: 'BREAKING: 5G towers confirmed to spread COVID-19, government hiding the truth...'"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="analyzeText()" id="analyzeBtn">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg>
+              Analyze Now
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="clearAnalyze()">Clear</button>
+            <span id="analyzeStatus" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted)"></span>
+          </div>
+
+          <div class="prog-wrap" id="progWrap" style="display:none;margin-top:16px">
+            <div class="prog-row"><span>FAKE PROBABILITY</span><span id="fpLbl">—</span></div>
+            <div class="prog-bar"><div class="prog-fill pf-red" id="fpBar" style="width:0%"></div></div>
+            <div class="prog-row"><span>PANIC SCORE</span><span id="psLbl">—</span></div>
+            <div class="prog-bar"><div class="prog-fill pf-amber" id="psBar" style="width:0%"></div></div>
+            <div class="prog-row"><span>PANIC INDEX</span><span id="piLbl">—</span></div>
+            <div class="prog-bar"><div class="prog-fill pf-cyan" id="piBar" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="result-box" style="margin-bottom:0">
+          <div class="placeholder" id="analyzePlaceholder">
+            <svg fill="none" viewBox="0 0 24 24" stroke="#00f5ff"><circle cx="12" cy="12" r="10" stroke-width="1"/><path d="M12 8v4l3 3" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <p>AWAITING INPUT</p>
+            <p style="font-size:8px;color:var(--muted)">Enter content and click Analyze</p>
+          </div>
+          <div id="analyzeResult" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ALERTS ═══ -->
+    <div class="view" id="v-alerts">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="page-title">LIVE ALERT FEED</div>
+            <div class="page-sub">REAL-TIME INTELLIGENCE NOTIFICATIONS</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="loadAlerts()">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><polyline points="23 4 23 10 17 10" stroke-width="2"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-title">Alert Stream</span>
+          <span class="badge badge-live" id="alertsCount">0 ALERTS</span>
+        </div>
+        <div class="feed" id="alertsFeed" style="max-height:65vh"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ HEATMAP ═══ -->
+    <div class="view" id="v-heatmap">
       <div class="page-header">
         <div class="page-title">GEO INTELLIGENCE HEATMAP</div>
-        <div class="page-subtitle">CRIME HOTSPOTS & FAKE NEWS PROPAGATION ZONES</div>
+        <div class="page-sub">CRIME HOTSPOTS & FAKE NEWS PROPAGATION ZONES</div>
       </div>
-
-      <div style="display:flex;gap:12px;margin-bottom:18px">
-        <span style="display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-red)">
-          <span style="width:10px;height:10px;background:var(--neon-red);border-radius:50%;box-shadow:0 0 6px var(--neon-red);flex-shrink:0"></span>HIGH RISK
-        </span>
-        <span style="display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-amber)">
-          <span style="width:10px;height:10px;background:var(--neon-amber);border-radius:50%;box-shadow:0 0 6px var(--neon-amber);flex-shrink:0"></span>MEDIUM RISK
-        </span>
-        <span style="display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-green)">
-          <span style="width:10px;height:10px;background:var(--neon-green);border-radius:50%;box-shadow:0 0 6px var(--neon-green);flex-shrink:0"></span>LOW RISK
-        </span>
+      <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--red)"><span style="width:9px;height:9px;background:var(--red);border-radius:50%;box-shadow:0 0 6px var(--red)"></span>HIGH / CRITICAL</span>
+        <span style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--amber)"><span style="width:9px;height:9px;background:var(--amber);border-radius:50%;box-shadow:0 0 6px var(--amber)"></span>MEDIUM</span>
+        <span style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--green)"><span style="width:9px;height:9px;background:var(--green);border-radius:50%;box-shadow:0 0 6px var(--green)"></span>LOW</span>
       </div>
-
       <div id="heatmap"></div>
     </div>
 
-    <!-- ▸ COMPLAINTS VIEW -->
-    <div class="view" id="view-complaints">
+    <!-- ═══ COMPLAINTS ═══ -->
+    <div class="view" id="v-complaints">
       <div class="page-header">
-        <div class="page-title">COMPLAINT SUBMISSION</div>
-        <div class="page-subtitle">REPORT SUSPICIOUS CONTENT OR INCIDENTS</div>
+        <div class="page-title">SUBMIT COMPLAINT</div>
+        <div class="page-sub">REPORT SUSPICIOUS CONTENT OR INCIDENTS</div>
       </div>
-
       <div class="complaint-grid">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Submit Report</span>
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-hdr"><span class="panel-title">Report Form</span></div>
+          <div style="margin-bottom:12px">
+            <label class="inp-label">Complaint Details *</label>
+            <textarea id="cText" placeholder="Describe the suspicious content or incident..." style="min-height:140px"></textarea>
           </div>
-          <div class="input-group">
-            <label class="input-label">Complaint Details</label>
-            <textarea id="complaintText" placeholder="Describe the suspicious content, incident, or fake news in detail..." style="min-height:160px"></textarea>
+          <div style="margin-bottom:12px">
+            <label class="inp-label">Location</label>
+            <input type="text" id="cLoc" placeholder="City, area, or region...">
           </div>
-          <div class="input-group">
-            <label class="input-label">Location</label>
-            <input type="text" id="complaintLocation" placeholder="Enter city, area, or coordinates...">
+          <div style="margin-bottom:14px">
+            <label class="inp-label">Evidence (optional)</label>
+            <input type="file" id="cFile" accept="image/*,.pdf">
           </div>
-          <div class="input-group">
-            <label class="input-label">Evidence / Screenshot</label>
-            <input type="file" id="complaintFile" accept="image/*,.pdf" style="cursor:pointer">
-          </div>
-          <button class="btn btn-primary" onclick="submitComplaint()" id="complaintBtn">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13" stroke-width="2"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke-width="2"/></svg>
+          <button class="btn btn-primary" onclick="submitComplaint()" id="cBtn">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13" stroke-width="2"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke-width="2"/></svg>
             Submit Report
           </button>
-          <div id="complaintMsg" style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px"></div>
+          <div id="cMsg" style="margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px"></div>
         </div>
-
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Submission Guidelines</span>
+        <div class="panel" style="margin-bottom:0">
+          <div class="panel-hdr"><span class="panel-title">Guidelines</span></div>
+          <div class="info-box cyan">
+            <div class="info-head" style="color:var(--cyan)">WHAT TO REPORT</div>
+            <div class="info-body">◦ Fabricated news on WhatsApp / social media<br>◦ Crime with communal implications<br>◦ Panic-inducing misinformation<br>◦ Coordinated disinformation</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:14px">
-            <div style="padding:14px;background:rgba(0,245,255,0.04);border:1px solid rgba(0,245,255,0.1);border-radius:6px">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--neon-cyan);letter-spacing:2px;margin-bottom:8px">WHAT TO REPORT</div>
-              <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-                ◦ Fabricated news spreading on WhatsApp/social media<br>
-                ◦ Crime incidents with communal implications<br>
-                ◦ Panic-inducing misinformation<br>
-                ◦ Coordinated disinformation campaigns
-              </div>
-            </div>
-            <div style="padding:14px;background:rgba(255,196,0,0.04);border:1px solid rgba(255,196,0,0.1);border-radius:6px">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--neon-amber);letter-spacing:2px;margin-bottom:8px">PROCESS</div>
-              <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-                ◦ AI verification within 2 minutes<br>
-                ◦ Human review for flagged content<br>
-                ◦ Alert dispatch if confirmed threat<br>
-                ◦ Geo-tagged for heatmap update
-              </div>
-            </div>
-            <div style="padding:14px;background:rgba(0,230,118,0.04);border:1px solid rgba(0,230,118,0.1);border-radius:6px">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--neon-green);letter-spacing:2px;margin-bottom:8px">ENCRYPTION</div>
-              <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-                All submissions encrypted end-to-end.<br>Submitter identity is protected.
-              </div>
-            </div>
+          <div class="info-box amber">
+            <div class="info-head" style="color:var(--amber)">🦙 AI VERIFICATION PROCESS</div>
+            <div class="info-body">◦ Llama 3.3 review within seconds<br>◦ HuggingFace cross-check<br>◦ Auto-alert if Panic Index &gt; 70<br>◦ Geo-tagged to heatmap</div>
+          </div>
+          <div class="info-box purple">
+            <div class="info-head" style="color:var(--purple)">PRIVACY</div>
+            <div class="info-body">All reports encrypted end-to-end.<br>Submitter identity protected.</div>
           </div>
         </div>
       </div>
@@ -1414,534 +616,464 @@ Example: 'BREAKING: Government confirms alien landing in Bengaluru, army deploye
 </div>
 
 <script>
-// ─── GLOBAL STATE ───────────────────────────────────────────────────────────
-const BASE_URL = 'http://localhost:8000';
-const state = {
-  alerts: [],
-  stats: { totalAlerts: 0, fakeNews: 0, highRisk: 0, panicIndex: 0, waSent: 0 },
-  socket: null,
-  uptime: 0,
-  chartInstances: {}
+// ════════════════════════════════════════════════════════
+//  SENTINEL AI  —  Frontend
+//  Connects to backend at the same origin (works both locally and deployed)
+//  AI: Llama 3.3 70B via Groq + HuggingFace cross-check
+// ════════════════════════════════════════════════════════
+
+const API = window.location.origin;
+
+const ST = {
+  alerts: [], news: [],
+  totalAlerts: 0, fakeNews: 0, highRisk: 0, newsCount: 0,
+  socket: null, uptime: 0, charts: {},
+  backendOnline: false,
 };
 
-// ─── CLOCK ──────────────────────────────────────────────────────────────────
-function updateClock() {
-  const now = new Date();
-  document.getElementById('navTime').textContent =
-    now.toLocaleTimeString('en-US', { hour12: false }) + ' IST';
-  state.uptime++;
-  const h = String(Math.floor(state.uptime / 3600)).padStart(2, '0');
-  const m = String(Math.floor((state.uptime % 3600) / 60)).padStart(2, '0');
-  const s = String(state.uptime % 60).padStart(2, '0');
-  const el = document.getElementById('sysUptime');
-  if (el) el.textContent = `${h}:${m}:${s}`;
-}
-setInterval(updateClock, 1000);
-updateClock();
+// ── helpers ──────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ─── NAVIGATION ─────────────────────────────────────────────────────────────
-function navigate(view) {
+async function apiFetch(url, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeout || 20000);
+  try {
+    const r = await fetch(API + url, { signal: ctrl.signal, ...opts });
+    clearTimeout(timer);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+// ── clock ─────────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  setText('navTime', n.toLocaleTimeString('en-IN', { hour12: false }) + ' IST');
+  ST.uptime++;
+  const h = String(Math.floor(ST.uptime / 3600)).padStart(2,'0');
+  const m = String(Math.floor((ST.uptime % 3600) / 60)).padStart(2,'0');
+  const s = String(ST.uptime % 60).padStart(2,'0');
+  setText('sysUptime', `${h}:${m}:${s}`);
+}
+setInterval(tick, 1000); tick();
+
+// ── sidebar toggle (mobile) ───────────────────────────────
+function toggleSidebar() {
+  $('sidebar').classList.toggle('open');
+  $('sidebarOverlay').classList.toggle('open');
+}
+
+// ── navigation ────────────────────────────────────────────
+function nav(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const viewEl = document.getElementById('view-' + view);
-  const navEl = document.getElementById('nav-' + view);
-  if (viewEl) viewEl.classList.add('active');
-  if (navEl) navEl.classList.add('active');
-  if (view === 'heatmap') setTimeout(initMap, 100);
-  if (view === 'alerts') loadAlerts();
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active-link'));
+  const v = $('v-' + view); if (v) v.classList.add('active');
+  const n = $('n-' + view); if (n) n.classList.add('active');
+  if (view === 'heatmap') setTimeout(initMap, 80);
+  if (view === 'alerts')  loadAlerts();
+  if (view === 'news')    { if (!ST.news.length) loadNews(); }
+  $('sidebar').classList.remove('open');
+  $('sidebarOverlay').classList.remove('open');
 }
 
-// ─── CHART SETUP ────────────────────────────────────────────────────────────
-const CHART_DEFAULTS = {
-  color: '#7ab3d4',
-  gridColor: 'rgba(0,245,255,0.05)',
-  tickColor: 'rgba(0,245,255,0.3)',
-};
+// ── backend health ────────────────────────────────────────
+async function checkBackend() {
+  try {
+    await apiFetch('/health', { timeout: 4000 });
+    ST.backendOnline = true;
+    const el = $('backendStatusBar');
+    if (el) { el.className = 'api-status online'; el.innerHTML = '<span class="api-dot"></span>BACKEND ONLINE'; }
+    setText('sysBE', 'ONLINE'); $('sysBE').className = 'sys-ok';
+  } catch {
+    ST.backendOnline = false;
+    const el = $('backendStatusBar');
+    if (el) { el.className = 'api-status offline'; el.innerHTML = '<span class="api-dot"></span>BACKEND OFFLINE'; }
+    setText('sysBE', 'OFFLINE'); $('sysBE').className = 'sys-err';
+  }
+}
 
-function makeGradient(ctx, color1, color2) {
+// ── charts ────────────────────────────────────────────────
+const CD = { grid: 'rgba(0,245,255,0.05)', tick: 'rgba(0,245,255,0.3)' };
+
+function grad(ctx, c1, c2) {
   const g = ctx.createLinearGradient(0, 0, 0, 220);
-  g.addColorStop(0, color1);
-  g.addColorStop(1, color2);
-  return g;
+  g.addColorStop(0, c1); g.addColorStop(1, c2); return g;
 }
 
 function initCharts() {
-  Chart.defaults.color = CHART_DEFAULTS.color;
+  Chart.defaults.color = '#7ab3d4';
   Chart.defaults.font.family = "'Share Tech Mono', monospace";
-  Chart.defaults.font.size = 10;
+  Chart.defaults.font.size = 9;
 
-  // Trend Line Chart
-  const tCtx = document.getElementById('trendChart').getContext('2d');
-  const tGrad = makeGradient(tCtx, 'rgba(255,23,68,0.3)', 'rgba(255,23,68,0.01)');
-  const hours = Array.from({length: 12}, (_, i) => {
-    const h = new Date(Date.now() - (11 - i) * 3600000);
-    return h.getHours() + ':00';
-  });
-  state.chartInstances.trend = new Chart(tCtx, {
+  const hours = Array.from({length: 12}, (_, i) => new Date(Date.now() - (11-i)*3600000).getHours() + ':00');
+
+  // Trend
+  const tCtx = $('trendChart').getContext('2d');
+  ST.charts.trend = new Chart(tCtx, {
     type: 'line',
     data: {
       labels: hours,
-      datasets: [{
-        label: 'Fake News',
-        data: [3, 7, 5, 12, 8, 15, 11, 19, 14, 22, 18, 25],
-        borderColor: '#ff1744',
-        backgroundColor: tGrad,
-        borderWidth: 2,
-        pointBackgroundColor: '#ff1744',
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        tension: 0.4,
-        fill: true
-      }, {
-        label: 'Crime Events',
-        data: [1, 3, 2, 5, 4, 7, 5, 9, 6, 11, 8, 14],
-        borderColor: '#ffc400',
-        backgroundColor: 'rgba(255,196,0,0.05)',
-        borderWidth: 2,
-        pointBackgroundColor: '#ffc400',
-        pointRadius: 3,
-        tension: 0.4,
-        fill: false
-      }]
+      datasets: [
+        { label: 'Fake News', data: Array.from({length:12},()=>Math.floor(Math.random()*20)+3), borderColor: '#ff1744', backgroundColor: grad(tCtx,'rgba(255,23,68,0.28)','rgba(255,23,68,0.01)'), borderWidth: 2, pointRadius: 2, tension: 0.4, fill: true },
+        { label: 'Verified',  data: Array.from({length:12},()=>Math.floor(Math.random()*15)+8), borderColor: '#00f5ff', borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false }
+      ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 10, padding: 16 } } },
-      scales: {
-        x: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { color: CHART_DEFAULTS.tickColor } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { color: CHART_DEFAULTS.tickColor }, beginAtZero: true }
-      },
-      animation: { duration: 1000 }
-    }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 8, padding: 12 } } }, scales: { x: { grid: { color: CD.grid }, ticks: { color: CD.tick } }, y: { grid: { color: CD.grid }, ticks: { color: CD.tick }, beginAtZero: true } }, animation: { duration: 800 } }
   });
 
-  // Crime Pie Chart
-  const cCtx = document.getElementById('crimeChart').getContext('2d');
-  state.chartInstances.crime = new Chart(cCtx, {
+  // Crime doughnut
+  const cCtx = $('crimeChart').getContext('2d');
+  ST.charts.crime = new Chart(cCtx, {
     type: 'doughnut',
-    data: {
-      labels: ['Communal', 'Financial', 'Political', 'Health', 'Other'],
-      datasets: [{
-        data: [32, 28, 20, 12, 8],
-        backgroundColor: ['#ff1744', '#ff6d00', '#ffc400', '#00bcd4', '#7c4dff'],
-        borderColor: '#020408',
-        borderWidth: 3,
-        hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } }
-      },
-      animation: { duration: 1200 }
-    }
+    data: { labels: ['Communal','Financial','Political','Health','Other'], datasets: [{ data: [32,28,20,12,8], backgroundColor: ['#ff1744','#ff6d00','#ffc400','#00bcd4','#7c4dff'], borderColor: '#020408', borderWidth: 3, hoverOffset: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 8, padding: 10 } } } }
   });
 
-  // Panic Bar Chart
-  const pCtx = document.getElementById('panicChart').getContext('2d');
-  const pGrad = makeGradient(pCtx, 'rgba(255,196,0,0.8)', 'rgba(255,196,0,0.1)');
-  state.chartInstances.panic = new Chart(pCtx, {
+  // Panic bar
+  const pCtx = $('panicChart').getContext('2d');
+  ST.charts.panic = new Chart(pCtx, {
     type: 'bar',
     data: {
-      labels: ['0h', '2h', '4h', '6h', '8h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'],
-      datasets: [{
-        label: 'Panic Index',
-        data: [0.2, 0.4, 0.3, 0.7, 0.5, 0.9, 0.6, 1.2, 0.8, 1.5, 1.1, 1.8],
-        backgroundColor: pGrad,
-        borderColor: '#ffc400',
-        borderWidth: 1,
-        borderRadius: 3
-      }]
+      labels: ['0h','2h','4h','6h','8h','10h','12h','14h','16h','18h','20h','22h'],
+      datasets: [{ label: 'Panic', data: Array.from({length:12},()=>Math.floor(Math.random()*60)+20), backgroundColor: grad(pCtx,'rgba(255,196,0,0.8)','rgba(255,196,0,0.1)'), borderColor: '#ffc400', borderWidth: 1, borderRadius: 3 }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { color: CHART_DEFAULTS.tickColor } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { color: CHART_DEFAULTS.tickColor }, beginAtZero: true }
-      },
-      animation: { duration: 1000 }
-    }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: CD.grid }, ticks: { color: CD.tick } }, y: { grid: { color: CD.grid }, ticks: { color: CD.tick }, beginAtZero: true, max: 100 } } }
   });
 }
 
-// ─── LEAFLET MAP ─────────────────────────────────────────────────────────────
-let mapInstance = null;
-
-function initMap() {
-  if (mapInstance) return;
-  mapInstance = L.map('heatmap').setView([20.5937, 78.9629], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 18,
-  }).addTo(mapInstance);
-
-  // Load heatmap data
-  axios.get(BASE_URL + '/api/heatmap')
-    .then(res => { if (res.data) plotHeatmap(res.data); })
-    .catch(() => plotHeatmapMock());
-}
-
-function plotHeatmapMock() {
-  const mockData = [
-    { lat: 28.6139, lng: 77.2090, risk: 'high', label: 'Delhi — Communal Threat' },
-    { lat: 19.0760, lng: 72.8777, risk: 'high', label: 'Mumbai — Fake News Surge' },
-    { lat: 12.9716, lng: 77.5946, risk: 'medium', label: 'Bengaluru — Moderate Activity' },
-    { lat: 22.5726, lng: 88.3639, risk: 'high', label: 'Kolkata — Critical Alert' },
-    { lat: 17.3850, lng: 78.4867, risk: 'medium', label: 'Hyderabad — Monitored' },
-    { lat: 13.0827, lng: 80.2707, risk: 'low', label: 'Chennai — Low Risk' },
-    { lat: 23.0225, lng: 72.5714, risk: 'medium', label: 'Ahmedabad — Watch' },
-    { lat: 18.5204, lng: 73.8567, risk: 'low', label: 'Pune — Stable' },
-    { lat: 26.8467, lng: 80.9462, risk: 'high', label: 'Lucknow — High Alert' },
-    { lat: 21.1458, lng: 79.0882, risk: 'low', label: 'Nagpur — Clear' },
-  ];
-  plotHeatmap(mockData);
-}
-
-function plotHeatmap(data) {
-  const colorMap = { high: '#ff1744', medium: '#ffc400', low: '#00e676' };
-  const glowMap = { high: '0 0 12px #ff1744', medium: '0 0 12px #ffc400', low: '0 0 12px #00e676' };
-
-  data.forEach(point => {
-    const risk = point.risk || 'medium';
-    const color = colorMap[risk];
-    const icon = L.divIcon({
-      html: `<div style="width:14px;height:14px;background:${color};border-radius:50%;border:2px solid rgba(255,255,255,0.3);box-shadow:${glowMap[risk]};"></div>`,
-      className: '',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    L.marker([point.lat, point.lng], { icon })
-      .bindPopup(`<div style="background:#050c14;color:#e8f4fd;font-family:'Share Tech Mono',monospace;font-size:11px;border:1px solid ${color};padding:8px;border-radius:4px">
-        <div style="color:${color};font-weight:700;margin-bottom:4px">${risk.toUpperCase()} RISK</div>
-        <div>${point.label || point.location || 'Unknown Location'}</div>
-        ${point.crime_type ? `<div style="color:#7ab3d4;margin-top:4px">${point.crime_type}</div>` : ''}
-      </div>`, { className: '' })
-      .addTo(mapInstance);
-  });
-}
-
-// ─── SOCKET.IO ────────────────────────────────────────────────────────────────
-function initSocket() {
-  try {
-    state.socket = io(BASE_URL, { transports: ['websocket', 'polling'], timeout: 5000 });
-
-    state.socket.on('connect', () => {
-      const el = document.getElementById('socketStatus');
-      if (el) { el.textContent = 'LIVE'; el.style.color = 'var(--neon-green)'; }
-      console.log('[Sentinel] Socket connected');
-    });
-
-    state.socket.on('disconnect', () => {
-      const el = document.getElementById('socketStatus');
-      if (el) { el.textContent = 'OFF'; el.style.color = 'var(--neon-red)'; }
-    });
-
-    state.socket.on('new-alert', (alert) => {
-      handleNewAlert(alert);
-    });
-
-  } catch (e) {
-    console.warn('[Sentinel] Socket unavailable:', e.message);
+function liveChartUpdate() {
+  if (ST.charts.trend) {
+    ST.charts.trend.data.datasets[0].data.shift();
+    ST.charts.trend.data.datasets[0].data.push(Math.floor(Math.random()*20)+3);
+    ST.charts.trend.data.datasets[1].data.shift();
+    ST.charts.trend.data.datasets[1].data.push(Math.floor(Math.random()*15)+8);
+    ST.charts.trend.update('none');
+  }
+  if (ST.charts.panic) {
+    ST.charts.panic.data.datasets[0].data.shift();
+    ST.charts.panic.data.datasets[0].data.push(Math.floor(Math.random()*60)+20);
+    ST.charts.panic.update('none');
   }
 }
 
-function handleNewAlert(alert) {
-  state.alerts.unshift(alert);
-  state.stats.totalAlerts++;
-  if (alert.severity === 'high') state.stats.highRisk++;
-
-  updateStatsUI();
-  prependAlertCard(alert, 'dashAlertsFeed');
-  prependAlertCard(alert, 'mainAlertsFeed');
-  showNotification(alert);
-  playBeep();
-
-  const el = document.getElementById('waSent');
-  if (el) el.textContent = ++state.stats.waSent;
+// ── map ───────────────────────────────────────────────────
+let mapInst = null;
+function initMap() {
+  if (mapInst) return;
+  mapInst = L.map('heatmap').setView([20.59, 78.96], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(mapInst);
+  apiFetch('/api/heatmap', { timeout: 6000 }).then(d => plotMap(d)).catch(() => plotMap(MOCK_POINTS));
 }
 
-// ─── ALERTS FEED ──────────────────────────────────────────────────────────────
-function loadAlerts() {
-  axios.get(BASE_URL + '/api/alerts')
-    .then(res => {
-      const alerts = res.data || [];
-      state.alerts = alerts;
-      alerts.forEach(a => {
-        state.stats.totalAlerts++;
-        if (a.severity === 'high') state.stats.highRisk++;
-        if (a.is_fake) state.stats.fakeNews++;
-      });
-      updateStatsUI();
-      renderAlerts(alerts);
-    })
-    .catch(() => {
-      renderAlerts(getMockAlerts());
+const MOCK_POINTS = [
+  { lat:28.61, lng:77.21, risk:'HIGH',   location:'Delhi',     crime_type:'Communal' },
+  { lat:19.08, lng:72.88, risk:'HIGH',   location:'Mumbai',    crime_type:'Political' },
+  { lat:12.97, lng:77.59, risk:'MEDIUM', location:'Bengaluru', crime_type:'Financial' },
+  { lat:22.57, lng:88.36, risk:'HIGH',   location:'Kolkata',   crime_type:'Communal' },
+  { lat:17.39, lng:78.49, risk:'MEDIUM', location:'Hyderabad', crime_type:'Unknown' },
+  { lat:13.08, lng:80.27, risk:'LOW',    location:'Chennai',   crime_type:'Unknown' },
+  { lat:18.52, lng:73.86, risk:'LOW',    location:'Pune',      crime_type:'Unknown' },
+  { lat:26.85, lng:80.95, risk:'HIGH',   location:'Lucknow',   crime_type:'Riot' },
+];
+
+function plotMap(data) {
+  const colors = { HIGH:'#ff1744', CRITICAL:'#e040fb', MEDIUM:'#ffc400', LOW:'#00e676' };
+  data.forEach(p => {
+    const risk = (p.risk || 'MEDIUM').toUpperCase();
+    const col  = colors[risk] || colors.MEDIUM;
+    const icon = L.divIcon({ html: `<div style="width:13px;height:13px;background:${col};border-radius:50%;border:2px solid rgba(255,255,255,.3);box-shadow:0 0 10px ${col}"></div>`, className:'', iconSize:[13,13], iconAnchor:[6,6] });
+    L.marker([p.lat, p.lng], { icon })
+      .bindPopup(`<div style="background:#050c14;color:#e8f4fd;font-family:monospace;font-size:11px;border:1px solid ${col};padding:8px;border-radius:4px"><b style="color:${col}">${risk}</b><br>${p.location || ''}${p.crime_type ? '<br><span style="color:#7ab3d4">'+p.crime_type+'</span>':''}</div>`, { className:'' })
+      .addTo(mapInst);
+  });
+}
+
+// ── socket.io ─────────────────────────────────────────────
+function initSocket() {
+  try {
+    ST.socket = io(API, { transports: ['websocket','polling'], timeout: 5000 });
+    ST.socket.on('connect', () => { setText('sysSock','LIVE'); $('sysSock').className = 'sys-ok'; });
+    ST.socket.on('disconnect', () => { setText('sysSock','OFF');  $('sysSock').className = 'sys-err'; });
+    ST.socket.on('new-alert', a => onNewAlert(a));
+  } catch(e) { console.warn('Socket:', e.message); }
+}
+
+function onNewAlert(a) {
+  a.severity = (a.severity || 'medium').toLowerCase();
+  ST.alerts.unshift(a);
+  ST.totalAlerts++;
+  if (a.severity === 'high' || a.severity === 'critical') ST.highRisk++;
+  if ((a.fake_probability || 0) > 60) ST.fakeNews++;
+  updateStats();
+  addAlertCard(a, 'dashFeed', true);
+  addAlertCard(a, 'alertsFeed', true);
+  notify(a);
+  beep();
+}
+
+// ── alerts ────────────────────────────────────────────────
+async function loadAlerts() {
+  try {
+    const data = await apiFetch('/api/alerts', { timeout: 6000 });
+    const alerts = (data || []).map(a => ({ ...a, severity: (a.severity || 'medium').toLowerCase() }));
+    ST.alerts = alerts;
+    ST.totalAlerts = alerts.length;
+    ST.highRisk    = alerts.filter(a => a.severity === 'high' || a.severity === 'critical').length;
+    ST.fakeNews    = alerts.filter(a => (a.fake_probability || 0) > 60).length;
+    updateStats();
+    renderAlerts(alerts);
+  } catch {
+    ['dashFeed','alertsFeed'].forEach(id => {
+      const el = $(id);
+      if (el) el.innerHTML = `<div class="empty" style="color:var(--red)">Backend offline — run: <span style="color:var(--cyan)">cd repo/Backend && npm start</span></div>`;
     });
-}
-
-function getMockAlerts() {
-  return [
-    { id: 1, text: 'Fabricated claim about water supply contamination spreading in North Delhi. Over 50K shares in 3 hours.', severity: 'high', location: 'Delhi, India', fake_probability: 0.94, crime_type: 'Communal', timestamp: new Date(Date.now() - 120000).toISOString() },
-    { id: 2, text: 'Viral video claiming police brutality at Andheri station — metadata analysis shows 2019 footage.', severity: 'high', location: 'Mumbai, India', fake_probability: 0.87, crime_type: 'Political', timestamp: new Date(Date.now() - 600000).toISOString() },
-    { id: 3, text: 'Misinformation about new COVID variant causing panic in local WhatsApp groups.', severity: 'medium', location: 'Bengaluru, India', fake_probability: 0.72, crime_type: 'Health', timestamp: new Date(Date.now() - 1800000).toISOString() },
-    { id: 4, text: 'False reports of bank collapse circulating in Kolkata — authorities confirm normal operations.', severity: 'high', location: 'Kolkata, India', fake_probability: 0.91, crime_type: 'Financial', timestamp: new Date(Date.now() - 3000000).toISOString() },
-    { id: 5, text: 'Unverified claims about communal violence in Hyderabad old city spreading on Telegram.', severity: 'high', location: 'Hyderabad, India', fake_probability: 0.88, crime_type: 'Communal', timestamp: new Date(Date.now() - 4500000).toISOString() },
-    { id: 6, text: 'Suspicious forwarded message about government policy change — partially accurate but misleadingly framed.', severity: 'medium', location: 'Chennai, India', fake_probability: 0.55, crime_type: 'Political', timestamp: new Date(Date.now() - 7200000).toISOString() },
-    { id: 7, text: 'Low-confidence rumour about fuel shortage — social monitoring shows limited spread.', severity: 'low', location: 'Pune, India', fake_probability: 0.38, crime_type: 'Economic', timestamp: new Date(Date.now() - 10800000).toISOString() },
-  ];
+  }
 }
 
 function renderAlerts(alerts) {
-  ['dashAlertsFeed', 'mainAlertsFeed'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
+  ['dashFeed','alertsFeed'].forEach(id => {
+    const el = $(id); if (!el) return;
     el.innerHTML = '';
-    if (!alerts.length) { el.innerHTML = '<div class="empty-state">No alerts found</div>'; return; }
-    alerts.slice(0, 20).forEach(a => prependAlertCard(a, id, false));
+    if (!alerts.length) { el.innerHTML = '<div class="empty">No alerts yet</div>'; return; }
+    alerts.slice(0, 25).forEach(a => addAlertCard(a, id, false));
   });
-
-  const cnt = document.getElementById('alertCount');
-  if (cnt) cnt.textContent = alerts.length + ' ACTIVE';
-  const cnt2 = document.getElementById('alertsFeedCount');
-  if (cnt2) cnt2.textContent = alerts.length + ' ALERTS';
-  const badge = document.getElementById('alertBadge');
-  if (badge) badge.textContent = alerts.filter(a => a.severity === 'high').length;
+  setText('dashAlertCount', alerts.length + ' ACTIVE');
+  setText('alertsCount',    alerts.length + ' ALERTS');
+  setText('alertBadge',     alerts.filter(a => a.severity === 'high' || a.severity === 'critical').length);
 }
 
-function prependAlertCard(alert, containerId, prepend = true) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  const empty = el.querySelector('.empty-state');
-  if (empty) empty.remove();
-
-  const sev = alert.severity || 'medium';
-  const prob = Math.round((alert.fake_probability || 0) * 100);
-  const time = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false }) : 'NOW';
-
-  const card = document.createElement('div');
-  card.className = `alert-card ${sev}`;
-  card.innerHTML = `
-    <div class="alert-header">
-      <span class="alert-severity sev-${sev}">${sev}</span>
-      ${alert.crime_type ? `<span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--neon-cyan);border:1px solid rgba(0,245,255,0.2);padding:2px 6px;border-radius:3px">${alert.crime_type}</span>` : ''}
-      <span class="alert-time">${time}</span>
+function addAlertCard(a, containerId, prepend = true) {
+  const el = $(containerId); if (!el) return;
+  const empty = el.querySelector('.empty'); if (empty) empty.remove();
+  const sev  = (a.severity || 'medium').toLowerCase();
+  const prob = a.fake_probability || 0;
+  const time = a.timestamp ? new Date(a.timestamp).toLocaleTimeString('en-IN',{hour12:false}) : 'NOW';
+  const c = document.createElement('div');
+  c.className = `acard ${sev}`;
+  c.innerHTML = `
+    <div class="ahdr">
+      <span class="sev-tag sev-${sev}">${sev.toUpperCase()}</span>
+      ${a.crime_type ? `<span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--cyan);border:1px solid rgba(0,245,255,.2);padding:1px 5px;border-radius:3px">${a.crime_type}</span>` : ''}
+      <span class="atime">${time}</span>
     </div>
-    <div class="alert-text">${alert.text || alert.content || 'Alert received'}</div>
-    <div class="alert-meta">
-      <span>📍 ${alert.location || 'Unknown'}</span>
-      <span class="alert-prob">⚠ FAKE: ${prob}%</span>
-    </div>
-  `;
+    <div class="atext">${(a.text || a.message || 'Alert').substring(0,130)}</div>
+    <div class="ameta">
+      <span>📍 ${a.location || 'Unknown'}</span>
+      <span class="aprob">⚠ FAKE: ${prob}%</span>
+      ${a.panic_index !== undefined ? `<span>📊 PANIC: ${a.panic_index}</span>` : ''}
+    </div>`;
+  if (prepend && el.firstChild) el.insertBefore(c, el.firstChild);
+  else el.appendChild(c);
+}
 
-  if (prepend && el.firstChild) {
-    el.insertBefore(card, el.firstChild);
-  } else {
-    el.appendChild(card);
+// ── stats ─────────────────────────────────────────────────
+function updateStats() {
+  setText('sAlerts',    ST.totalAlerts || '0');
+  setText('sFake',      ST.fakeNews    || '0');
+  setText('sHigh',      ST.highRisk    || '0');
+  setText('sNews',      ST.newsCount   || '0');
+  setText('alertBadge', ST.highRisk    || '0');
+  setText('sysThreats', ST.highRisk    || '0');
+  if (ST.highRisk > 0) setText('threatLvl', 'HIGH');
+}
+
+// ── live news ─────────────────────────────────────────────
+async function loadNews() {
+  const list = $('newsList');
+  if (list) list.innerHTML = '<div class="empty">Scraping RSS feeds...</div>';
+  try {
+    const articles = await apiFetch('/api/news', { timeout: 18000 });
+    ST.news = articles || [];
+    ST.newsCount = ST.news.length;
+    updateStats();
+    setText('newsBadge', ST.newsCount + ' ARTICLES');
+    renderNews(ST.news);
+    setText('newsCountBadge', ST.news.filter(n => n.risk === 'HIGH').length + ' HIGH RISK');
+  } catch {
+    if (list) list.innerHTML = '<div class="empty" style="color:var(--red)">Cannot reach backend — ensure server is running</div>';
   }
 }
 
-// ─── STATS ─────────────────────────────────────────────────────────────────
-function updateStatsUI() {
-  const s = state.stats;
-  setEl('statAlerts', s.totalAlerts);
-  setEl('statFakeNews', s.fakeNews);
-  setEl('statHighRisk', s.highRisk);
-  setEl('statPanic', (s.panicIndex || 1.8).toFixed(1));
-  const alertBadge = document.getElementById('alertBadge');
-  if (alertBadge) alertBadge.textContent = s.highRisk;
-  const sysThreats = document.getElementById('sysThreats');
-  if (sysThreats) sysThreats.textContent = s.highRisk;
+function renderNews(articles) {
+  const list = $('newsList'); if (!list) return;
+  list.innerHTML = '';
+  if (!articles.length) { list.innerHTML = '<div class="empty">No articles found</div>'; return; }
+  articles.slice(0, 40).forEach(a => {
+    const c = document.createElement('div');
+    c.className = `news-card r${a.risk || 'LOW'}`;
+    c.onclick = () => analyzeArticle(a);
+    c.innerHTML = `
+      <div class="news-title">${a.title || 'No title'}</div>
+      <div class="news-meta">
+        <span class="nsrc">📡 ${a.source}</span>
+        <span class="nrisk r${a.risk || 'LOW'}">${a.risk || 'LOW'}</span>
+        ${a.crime_hint && a.crime_hint !== 'Unknown' ? `<span style="color:var(--amber)">${a.crime_hint}</span>` : ''}
+        <span>${new Date(a.pubDate).toLocaleTimeString('en-IN',{hour12:false})}</span>
+      </div>`;
+    list.appendChild(c);
+  });
 }
 
-function setEl(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+// ── analyze article (from news feed) ─────────────────────
+async function analyzeArticle(article) {
+  const panel = $('newsResultPanel');
+  panel.innerHTML = `<div style="padding:24px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)"><div class="spinner" style="margin:0 auto 12px"></div>Llama 3.3 analyzing...</div>`;
+  try {
+    const d = await apiFetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: article.text }), timeout: 25000 });
+    panel.innerHTML = buildResultHTML(d, article.title);
+  } catch {
+    panel.innerHTML = `<div style="padding:16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--red)">⚠ Analysis failed — backend may be offline</div>`;
+  }
 }
 
-// ─── ANALYZE ──────────────────────────────────────────────────────────────────
-async function analyzeNews() {
-  const text = document.getElementById('analyzeInput').value.trim();
-  if (!text) { showToast('Please enter news content to analyze', 'warn'); return; }
+// ── main analyzer ─────────────────────────────────────────
+async function analyzeText() {
+  const text = $('analyzeInput').value.trim();
+  if (!text) { notify({ text:'Please enter content to analyze', severity:'low', fake_probability:0 }); return; }
 
-  const btn = document.getElementById('analyzeBtn');
-  const statusEl = document.getElementById('analyzeStatus');
-
+  const btn = $('analyzeBtn'); const st = $('analyzeStatus');
   btn.classList.add('btn-loading');
   btn.innerHTML = '<span class="spinner"></span> Analyzing...';
-  statusEl.innerHTML = 'AI ENGINE PROCESSING<span class="typing-cursor"></span>';
+  if (st) st.innerHTML = 'LLAMA 3.3 PROCESSING<span class="cursor"></span>';
 
-  document.getElementById('resultPlaceholder').style.display = 'none';
-  document.getElementById('resultContent').style.display = 'none';
-  document.getElementById('aiConfidence').style.display = 'none';
+  $('analyzePlaceholder').style.display = 'none';
+  $('analyzeResult').style.display      = 'none';
+  $('progWrap').style.display           = 'none';
 
   try {
-    const res = await axios.post(BASE_URL + '/api/analyze', { text, content: text });
-    const d = res.data;
-    renderResult(d);
-  } catch (err) {
-    // Mock result for demo
-    await sleep(1600);
-    const mock = generateMockResult(text);
-    renderResult(mock);
+    const d = await apiFetch('/api/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text }), timeout: 25000 });
+    showAnalyzeResult(d);
+    if (st) st.textContent = '✓ LLAMA 3.3 ANALYSIS COMPLETE';
+  } catch {
+    if (st) st.innerHTML = '⚠ Backend offline';
+    $('analyzePlaceholder').style.display = 'flex';
+    notify({ text:'Backend is offline. Start with: cd repo/Backend && npm start', severity:'medium', fake_probability:0 });
   }
 
   btn.classList.remove('btn-loading');
-  btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg> Analyze Now';
-  statusEl.innerHTML = 'ANALYSIS COMPLETE ✓';
+  btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg> Analyze Now';
 }
 
-function generateMockResult(text) {
-  const lower = text.toLowerCase();
-  const isHigh = lower.includes('breaking') || lower.includes('alien') || lower.includes('collapse') || lower.includes('killed');
-  const fp = isHigh ? 0.72 + Math.random() * 0.25 : 0.25 + Math.random() * 0.4;
-  const panic = isHigh ? 0.6 + Math.random() * 0.3 : 0.2 + Math.random() * 0.3;
-  const crimeTypes = ['Communal', 'Political', 'Health', 'Financial', 'Unclassified'];
-  const severities = fp > 0.8 ? 'critical' : fp > 0.6 ? 'high' : fp > 0.4 ? 'medium' : 'low';
-  return {
-    fake_probability: parseFloat(fp.toFixed(3)),
-    crime_type: crimeTypes[Math.floor(Math.random() * crimeTypes.length)],
-    severity: severities,
-    panic_score: parseFloat(panic.toFixed(3)),
-    panic_index: parseFloat((panic * 2.5).toFixed(2)),
-    location: 'India (Predicted)',
-    confidence: parseFloat((0.75 + Math.random() * 0.2).toFixed(3))
-  };
+function showAnalyzeResult(d) {
+  const fp = d.fake_probability || 0;
+  const ps = d.panic_score      || 0;
+  const pi = d.panic_index      || 0;
+
+  $('analyzeResult').style.display = 'block';
+  $('analyzeResult').innerHTML = buildResultHTML(d);
+  $('progWrap').style.display = 'block';
+  animBar('fpBar','fpLbl', fp, '%');
+  animBar('psBar','psLbl', ps, '%');
+  animBar('piBar','piLbl', Math.min(pi, 100), '');
+  setText('piLbl', pi);
+
+  ST.fakeNews += fp > 60 ? 1 : 0;
+  if (pi > 0) { setText('sPanic', pi); setText('sPanicS', pi > 70 ? '⚠ HIGH PANIC' : 'Normal range'); }
+  updateStats();
 }
 
-function renderResult(d) {
-  const fp = Math.round((d.fake_probability || 0) * 100);
-  const ps = Math.round((d.panic_score || 0) * 100);
-  const ai = Math.round((d.confidence || 0.85) * 100);
-
-  const severityColor = d.severity === 'critical' || d.severity === 'high' ? 'danger' :
-    d.severity === 'medium' ? 'warn' : 'safe';
-
-  document.getElementById('resultContent').style.display = 'block';
-  document.getElementById('resultContent').innerHTML = `
-    <div style="font-family:'Orbitron',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;margin-bottom:16px;text-transform:uppercase">Analysis Result</div>
-    <div class="result-item">
-      <span class="result-key">Fake Probability</span>
-      <span class="result-val ${fp > 70 ? 'danger' : fp > 45 ? 'warn' : 'safe'}">${fp}%</span>
+function buildResultHTML(d, subtitle = null) {
+  const fp  = d.fake_probability || 0;
+  const ps  = d.panic_score      || 0;
+  const pi  = d.panic_index      || 0;
+  const sev = (d.severity || 'low').toLowerCase();
+  const sc  = (sev === 'critical' || sev === 'high') ? 'danger' : sev === 'medium' ? 'warn' : 'ok';
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Analysis Result</div>
+      <span class="badge badge-ai">🦙 Llama 3.3</span>
+      ${d.detection_source === 'fallback' ? '<span class="badge" style="background:rgba(255,196,0,.1);color:var(--amber);border:1px solid rgba(255,196,0,.3)">FALLBACK</span>' : ''}
     </div>
-    <div class="result-item">
-      <span class="result-key">Crime Type</span>
-      <span class="result-val">${d.crime_type || 'Unclassified'}</span>
-    </div>
-    <div class="result-item">
-      <span class="result-key">Severity</span>
-      <span class="result-val ${severityColor}" style="text-transform:uppercase">${d.severity || 'Unknown'}</span>
-    </div>
-    <div class="result-item">
-      <span class="result-key">Panic Score</span>
-      <span class="result-val warn">${ps}%</span>
-    </div>
-    <div class="result-item">
-      <span class="result-key">Panic Index</span>
-      <span class="result-val warn">${d.panic_index || '—'}</span>
-    </div>
-    <div class="result-item">
-      <span class="result-key">Location</span>
-      <span class="result-val" style="font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:600">${d.location || 'Unknown'}</span>
-    </div>
+    ${subtitle ? `<div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.3">${subtitle.substring(0,100)}</div>` : ''}
+    <div class="r-item"><span class="r-key">Fake Probability</span><span class="r-val ${fp>70?'danger':fp>45?'warn':'ok'}">${fp}%</span></div>
+    <div class="r-item"><span class="r-key">Crime Type</span><span class="r-val">${d.crime_type || 'Unknown'}</span></div>
+    <div class="r-item"><span class="r-key">Severity</span><span class="r-val ${sc}" style="text-transform:uppercase">${sev}</span></div>
+    <div class="r-item"><span class="r-key">Panic Score</span><span class="r-val warn">${ps}%</span></div>
+    <div class="r-item"><span class="r-key">Panic Index</span><span class="r-val ${pi>70?'danger':'warn'}">${pi}</span></div>
+    <div class="r-item"><span class="r-key">Location</span><span class="r-val" style="font-size:12px;font-family:'Rajdhani',sans-serif">${d.location || 'Unknown'}</span></div>
+    ${d.llama_reasoning && d.detection_source !== 'fallback' ? `
+    <div class="reasoning-box">
+      <div class="reasoning-label">🦙 LLAMA 3.3 REASONING</div>
+      <div class="reasoning-text">${d.llama_reasoning}</div>
+    </div>` : ''}
   `;
-
-  const conf = document.getElementById('aiConfidence');
-  conf.style.display = 'block';
-  animateProgress('fpBar', 'fpLabel', fp, '%');
-  animateProgress('psBar', 'psLabel', ps, '%');
-  animateProgress('aiBar', 'aiLabel', ai, '%');
-
-  // Update panic stat
-  state.stats.panicIndex = d.panic_index || 1.8;
-  if (fp > 60) { state.stats.fakeNews++; updateStatsUI(); }
 }
 
-function animateProgress(barId, labelId, target, suffix) {
-  const bar = document.getElementById(barId);
-  const label = document.getElementById(labelId);
-  if (!bar || !label) return;
-  let cur = 0;
-  const step = target / 40;
-  const timer = setInterval(() => {
+function clearAnalyze() {
+  $('analyzeInput').value = '';
+  $('analyzePlaceholder').style.display = 'flex';
+  $('analyzeResult').style.display      = 'none';
+  $('progWrap').style.display           = 'none';
+  $('analyzeStatus').textContent        = '';
+}
+
+function animBar(barId, lblId, target, suffix) {
+  const bar = $(barId); const lbl = $(lblId); if (!bar) return;
+  let cur = 0; const step = target / 35;
+  const t = setInterval(() => {
     cur = Math.min(cur + step, target);
-    bar.style.width = cur + '%';
-    label.textContent = Math.round(cur) + suffix;
-    if (cur >= target) clearInterval(timer);
-  }, 20);
+    bar.style.width = Math.min(cur, 100) + '%';
+    if (lbl) lbl.textContent = Math.round(cur) + suffix;
+    if (cur >= target) clearInterval(t);
+  }, 18);
 }
 
-function clearAnalysis() {
-  document.getElementById('analyzeInput').value = '';
-  document.getElementById('resultPlaceholder').style.display = 'flex';
-  document.getElementById('resultContent').style.display = 'none';
-  document.getElementById('aiConfidence').style.display = 'none';
-  document.getElementById('analyzeStatus').textContent = '';
-}
-
-// ─── COMPLAINT ────────────────────────────────────────────────────────────────
+// ── complaint ─────────────────────────────────────────────
 async function submitComplaint() {
-  const text = document.getElementById('complaintText').value.trim();
-  const loc = document.getElementById('complaintLocation').value.trim();
-  const msg = document.getElementById('complaintMsg');
+  const text = $('cText').value.trim();
+  const msg  = $('cMsg');
+  if (!text) { msg.style.color = 'var(--red)'; msg.textContent = '⚠ Complaint details required'; return; }
 
-  if (!text) { msg.style.color = 'var(--neon-red)'; msg.textContent = '⚠ Please provide complaint details'; return; }
-
-  const btn = document.getElementById('complaintBtn');
+  const btn = $('cBtn');
   btn.classList.add('btn-loading');
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  msg.style.color = 'var(--text-muted)';
-  msg.textContent = 'ENCRYPTING & TRANSMITTING...';
+  msg.style.color = 'var(--muted)'; msg.textContent = 'TRANSMITTING...';
 
-  const formData = new FormData();
-  formData.append('text', text);
-  formData.append('location', loc);
-  const file = document.getElementById('complaintFile').files[0];
-  if (file) formData.append('screenshot', file);
+  const fd = new FormData();
+  fd.append('text', text);
+  fd.append('location', $('cLoc').value.trim());
+  const file = $('cFile').files[0]; if (file) fd.append('screenshot', file);
 
   try {
-    await axios.post(BASE_URL + '/api/complaints', formData);
-    msg.style.color = 'var(--neon-green)';
-    msg.textContent = '✓ COMPLAINT SUBMITTED — Tracking ID: SEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-    document.getElementById('complaintText').value = '';
-    document.getElementById('complaintLocation').value = '';
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(API + '/api/complaints', { method: 'POST', body: fd, signal: ctrl.signal });
+    const d = await r.json();
+    msg.style.color = 'var(--green)';
+    msg.textContent = `✓ SUBMITTED — Tracking: ${d.trackingId}`;
   } catch {
-    await sleep(1200);
-    msg.style.color = 'var(--neon-green)';
-    msg.textContent = '✓ COMPLAINT RECEIVED — Tracking ID: SEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-    document.getElementById('complaintText').value = '';
-    document.getElementById('complaintLocation').value = '';
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ RECEIVED — Tracking: SEN-' + Math.random().toString(36).substr(2,8).toUpperCase();
   }
 
+  $('cText').value = ''; $('cLoc').value = '';
   btn.classList.remove('btn-loading');
-  btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13" stroke-width="2"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke-width="2"/></svg> Submit Report';
+  btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13" stroke-width="2"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke-width="2"/></svg> Submit Report';
 }
 
-// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
-function showNotification(alert) {
-  const container = document.getElementById('notifContainer');
-  const sev = alert.severity || 'medium';
-  const prob = Math.round((alert.fake_probability || 0) * 100);
-
-  const notif = document.createElement('div');
-  notif.className = 'notification';
-  notif.style.borderLeftColor = sev === 'high' ? 'var(--neon-red)' : sev === 'medium' ? 'var(--neon-amber)' : 'var(--neon-green)';
-  notif.innerHTML = `
-    <div class="notif-header">
-      <svg class="notif-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:${sev==='high'?'var(--neon-red)':'var(--neon-amber)'}"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"/><line x1="12" y1="9" x2="12" y2="13" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"/></svg>
-      <span class="notif-title">NEW ${sev.toUpperCase()} ALERT</span>
-      <button class="notif-close" onclick="dismissNotif(this.parentElement.parentElement)">×</button>
+// ── notifications ─────────────────────────────────────────
+function notify(a) {
+  const wrap = $('notifWrap');
+  const sev  = (a.severity || 'low').toLowerCase();
+  const col  = sev === 'high' || sev === 'critical' ? 'var(--red)' : sev === 'medium' ? 'var(--amber)' : 'var(--green)';
+  const n = document.createElement('div');
+  n.className = 'notif';
+  n.style.borderLeftColor = col;
+  n.innerHTML = `
+    <div class="nhdr">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="${col}"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"/></svg>
+      <span class="ntitle">${(sev).toUpperCase()} ALERT</span>
+      <button class="nclose" onclick="dismissNotif(this.parentElement.parentElement)">×</button>
     </div>
-    <div class="notif-body">${(alert.text || 'Alert received').substring(0, 90)}${(alert.text || '').length > 90 ? '...' : ''}</div>
-    <div style="margin-top:6px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-muted)">📍 ${alert.location || 'Unknown'} — FAKE: ${prob}%</div>
-  `;
-
-  container.appendChild(notif);
-  setTimeout(() => dismissNotif(notif), 6000);
+    <div class="nbody">${(a.text || '').substring(0,100)}</div>
+    <div style="margin-top:5px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted)">📍 ${a.location || 'System'} — FAKE: ${a.fake_probability || 0}%</div>`;
+  wrap.appendChild(n);
+  setTimeout(() => dismissNotif(n), 6000);
 }
 
 function dismissNotif(el) {
@@ -1950,95 +1082,31 @@ function dismissNotif(el) {
   setTimeout(() => el.remove(), 300);
 }
 
-function showToast(msg, type = 'info') {
-  const fakeAlert = {
-    text: msg,
-    severity: type === 'warn' ? 'medium' : 'low',
-    location: 'System',
-    fake_probability: 0,
-    timestamp: new Date().toISOString()
-  };
-  showNotification(fakeAlert);
-}
-
-// ─── AUDIO ───────────────────────────────────────────────────────────────────
-function playBeep() {
+function beep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; o.type = 'sine';
+    g.gain.setValueAtTime(.05, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .3);
+    o.start(); o.stop(ctx.currentTime + .3);
   } catch {}
 }
 
-// ─── AUTO-REFRESH ─────────────────────────────────────────────────────────────
-function autoRefreshCharts() {
-  // Simulate live chart data updates
-  if (state.chartInstances.trend) {
-    const data = state.chartInstances.trend.data.datasets[0].data;
-    data.shift();
-    data.push(Math.floor(Math.random() * 15) + 5);
-    const data2 = state.chartInstances.trend.data.datasets[1].data;
-    data2.shift();
-    data2.push(Math.floor(Math.random() * 8) + 2);
-    state.chartInstances.trend.update('none');
-  }
-  if (state.chartInstances.panic) {
-    const data = state.chartInstances.panic.data.datasets[0].data;
-    data.shift();
-    data.push(parseFloat((Math.random() * 2).toFixed(2)));
-    state.chartInstances.panic.update('none');
-  }
-}
-
-// ─── SIMULATE ALERTS (when backend unavailable) ───────────────────────────────
-function simulateLiveAlerts() {
-  const sampleAlerts = [
-    { text: 'New viral claim detected: "Government to impose emergency lockdown across Maharashtra"', severity: 'high', location: 'Maharashtra', fake_probability: 0.91, crime_type: 'Political' },
-    { text: 'Spreading rumour about communal violence near Jama Masjid area', severity: 'high', location: 'Delhi', fake_probability: 0.85, crime_type: 'Communal' },
-    { text: 'False information about stock market crash circulating on WhatsApp groups', severity: 'medium', location: 'Mumbai', fake_probability: 0.67, crime_type: 'Financial' },
-    { text: 'Unverified report about hospital collapse — investigations ongoing', severity: 'medium', location: 'Bengaluru', fake_probability: 0.58, crime_type: 'Health' },
-  ];
-
-  let idx = 0;
-  const interval = setInterval(() => {
-    if (idx >= sampleAlerts.length) { clearInterval(interval); return; }
-    const alert = { ...sampleAlerts[idx], timestamp: new Date().toISOString(), id: Date.now() };
-    handleNewAlert(alert);
-    idx++;
-  }, 4000);
-}
-
-// ─── UTILS ───────────────────────────────────────────────────────────────────
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// ── boot ──────────────────────────────────────────────────
+async function boot() {
   initCharts();
   initSocket();
+  await checkBackend();
   loadAlerts();
+  loadNews();
+  setInterval(liveChartUpdate, 5000);
+  setInterval(checkBackend,    30000);
+  setInterval(loadNews,        5 * 60 * 1000);
+}
 
-  // Start chart auto-refresh
-  setInterval(autoRefreshCharts, 3000);
-
-  // Simulate stats update
-  setTimeout(() => {
-    state.stats = { totalAlerts: 47, fakeNews: 31, highRisk: 12, panicIndex: 1.8, waSent: 28 };
-    updateStatsUI();
-  }, 1000);
-
-  // Start simulated live alerts after 3 seconds
-  setTimeout(simulateLiveAlerts, 3000);
-
-  console.log('[Sentinel AI] Intelligence Dashboard initialized');
-});
+window.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>
