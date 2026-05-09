@@ -1,0 +1,41 @@
+{
+  "name": "sentinel-ai-backend",
+  "version": "2.0.0",
+  "description": "Sentinel AI — AI-powered Crime and Fake News Intelligence Backend with WhatsApp Bot & Authority Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test": "echo \"No tests configured yet\" && exit 0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "rss-parser": "^3.13.0",
+    "socket.io": "^4.6.2",
+    "twilio": "^4.20.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "sentinel-ai",
+    "fake-news",
+    "crime-detection",
+    "whatsapp-bot",
+    "authority-dashboard",
+    "cyber-intelligence"
+  ],
+  "author": "Sentinel AI Team",
+  "license": "MIT"
+}
