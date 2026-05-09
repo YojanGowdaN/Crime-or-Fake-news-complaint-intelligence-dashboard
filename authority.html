@@ -815,7 +815,7 @@ function renderReportsTable(reports, type) {
     <tbody>${reports.map(r => `
       <tr onclick="openReportModal('${r.id}')">
         <td><span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-muted)">${r.id.slice(-8)}</span></td>
-        <td class="td-title" title="${escHtml(r.title || '')}">${escHtml(r.title || "Untitled Report")}</td>
+        <td class="td-title" title="${escHtml(r.title || '')}">${r.channel === 'public-complaint' ? `<span style="font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;padding:2px 6px;border-radius:3px;background:rgba(224,64,251,0.15);color:var(--neon-purple);border:1px solid rgba(224,64,251,0.3);margin-right:6px;vertical-align:middle">PUBLIC</span>` : ""}${escHtml(r.title || "Untitled Report")}</td>
         <td><span class="risk-badge risk-${r.riskLevel || 'LOW'}">${r.riskLevel || 'LOW'}</span></td>
         <td style="font-size:11px">${escHtml(r.crimeType || "Unknown")}</td>
         <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${Math.round((r.confidenceScore||0.5)*100)}%"></div></div><span class="conf-val">${Math.round((r.confidenceScore||0.5)*100)}%</span></div></td>
@@ -872,11 +872,12 @@ async function openReportModal(id) {
         <div class="detail-item"><div class="detail-key">Report ID</div><div class="detail-val" style="font-family:'Share Tech Mono',monospace;font-size:11px">${r.id}</div></div>
         <div class="detail-item"><div class="detail-key">Status</div><div class="detail-val"><span class="status-badge status-${r.status}">${r.status}</span></div></div>
         <div class="detail-item"><div class="detail-key">Risk Level</div><div class="detail-val"><span class="risk-badge risk-${r.riskLevel}">${r.riskLevel || 'LOW'}</span></div></div>
-        <div class="detail-item"><div class="detail-key">Fake Probability</div><div class="detail-val" style="color:var(--neon-red)">${r.fakeProbability || 0}%</div></div>
-        <div class="detail-item"><div class="detail-key">AI Confidence</div><div class="detail-val">${Math.round((r.confidenceScore||0.5)*100)}%</div></div>
+        <div class="detail-item"><div class="detail-key">Fake Probability</div><div class="detail-val" style="color:var(--neon-red)">${r.fakeProbability != null ? r.fakeProbability + "%" : "Pending review"}</div></div>
+        <div class="detail-item"><div class="detail-key">AI Confidence</div><div class="detail-val">${r.confidenceScore != null ? Math.round(r.confidenceScore*100) + "%" : "Pending review"}</div></div>
         <div class="detail-item"><div class="detail-key">Crime Type</div><div class="detail-val">${escHtml(r.crimeType || "Unknown")}</div></div>
         <div class="detail-item"><div class="detail-key">Location</div><div class="detail-val">${escHtml(r.location || "Unknown")}</div></div>
-        <div class="detail-item"><div class="detail-key">Channel</div><div class="detail-val">${escHtml(r.channel || "text")}</div></div>
+        <div class="detail-item"><div class="detail-key">Channel</div><div class="detail-val">${r.channel === "public-complaint" ? `<span style="color:var(--neon-purple);font-weight:600">Public Complaint Form</span>` : escHtml(r.channel || "text")}</div></div>
+        ${r.trackingId ? `<div class="detail-item"><div class="detail-key">Tracking ID</div><div class="detail-val" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-amber)">${escHtml(r.trackingId)}</div></div>` : ""}
         <div class="detail-item"><div class="detail-key">Received</div><div class="detail-val" style="font-size:12px">${formatDate(r.createdAt)}</div></div>
         <div class="detail-item"><div class="detail-key">Escalation Level</div><div class="detail-val">${r.escalationLevel || 0}</div></div>
       </div>
